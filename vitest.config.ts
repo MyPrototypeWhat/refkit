@@ -9,6 +9,7 @@ export default defineConfig({
       './packages/provider-unsplash/vitest.config.ts',
       './packages/provider-pexels/vitest.config.ts',
       './packages/provider-pixabay/vitest.config.ts',
+      './packages/provider-gutendex/vitest.config.ts',
     ],
   },
 })
