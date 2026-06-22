@@ -12,6 +12,7 @@ export default defineConfig({
       './packages/provider-gutendex/vitest.config.ts',
       './packages/provider-poetrydb/vitest.config.ts',
       './packages/mcp/vitest.config.ts',
+      './packages/provider-brave/vitest.config.ts',
     ],
   },
 })

@@ -43,6 +43,12 @@ importers:
         specifier: workspace:*
         version: link:../provider-openverse
 
+  packages/provider-brave:
+    dependencies:
+      '@refkit/core':
+        specifier: workspace:*
+        version: link:../core
+
   packages/provider-gutendex:
     dependencies:
       '@refkit/core':
