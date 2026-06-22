@@ -32,6 +32,10 @@ importers:
       '@refkit/core':
         specifier: workspace:*
         version: link:../core
+    devDependencies:
+      '@refkit/provider-poetrydb':
+        specifier: workspace:*
+        version: link:../provider-poetrydb
 
   packages/provider-openverse:
     dependencies:
