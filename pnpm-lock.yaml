@@ -39,6 +39,12 @@ importers:
         specifier: workspace:*
         version: link:../core
 
+  packages/provider-pixabay:
+    dependencies:
+      '@refkit/core':
+        specifier: workspace:*
+        version: link:../core
+
   packages/provider-unsplash:
     dependencies:
       '@refkit/core':
