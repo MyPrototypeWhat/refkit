@@ -11,6 +11,7 @@ export default defineConfig({
       './packages/provider-pixabay/vitest.config.ts',
       './packages/provider-gutendex/vitest.config.ts',
       './packages/provider-poetrydb/vitest.config.ts',
+      './packages/mcp/vitest.config.ts',
     ],
   },
 })
