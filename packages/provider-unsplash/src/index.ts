@@ -48,7 +48,7 @@ export function unsplash(config: UnsplashConfig) {
     async search(q: NormalizedQuery, ctx: ProviderContext): Promise<Reference[]> {
       const url = new URL('https://api.unsplash.com/search/photos')
       url.searchParams.set('query', q.text)
-      url.searchParams.set('per_page', String(Math.min(q.limit ?? 10, 30)))
+      url.searchParams.set('per_page', String(Math.min(q.limit ?? 10, 30))) // Unsplash hard-caps per_page at 30; default kept low for free-tier rate limits
       const res = await ctx.fetch(url.toString(), {
         headers: { Authorization: `Client-ID ${config.accessKey}`, 'Accept-Version': 'v1' },
         signal: ctx.signal,

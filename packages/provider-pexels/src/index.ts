@@ -12,7 +12,7 @@ interface PexelsPhoto {
   url: string
   photographer: string
   photographer_url: string
-  avg_color: string
+  avg_color: string | null
   alt: string
   src: { tiny: string; medium: string; original: string }
 }
@@ -22,6 +22,7 @@ function toReference(p: PexelsPhoto): Reference {
   const rights: RightsRecord = {
     license: 'pexels',
     author: p.photographer,
+    // conservative: Pexels ToS forbids redistributing the asset as a download; serve via the pexels CDN url + link back
     rehostPolicy: 'hotlink-required',
     raw: { sourceTerms: 'https://www.pexels.com/license/', sourceUrl: p.url },
   }

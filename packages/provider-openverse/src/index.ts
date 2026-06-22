@@ -21,6 +21,8 @@ interface OpenverseResult {
   license: string
   license_version: string
   license_url: string
+  creator_url?: string | null
+  attribution?: string | null
 }
 interface OpenverseResponse { results: OpenverseResult[] }
 
@@ -49,6 +51,7 @@ function toReference(r: OpenverseResult): Reference {
   const rights: RightsRecord = {
     license: mapOpenverseLicense(r.license, r.license_version),
     author: r.creator ?? undefined,
+    // governed by the per-item CC/PD license (Openverse imposes no hotlink/download-trigger requirement)
     rehostPolicy: 'cache-allowed',
     raw: { sourceTerms: r.license_url, sourceUrl: r.foreign_landing_url },
   }
@@ -75,7 +78,7 @@ export function openverse(config: OpenverseConfig = {}) {
     async search(q: NormalizedQuery, ctx: ProviderContext): Promise<Reference[]> {
       const url = new URL('https://api.openverse.org/v1/images/')
       url.searchParams.set('q', q.text)
-      url.searchParams.set('license_type', 'commercial,modification') // bias to usable
+      url.searchParams.set('license_type', 'commercial,modification') // performance/relevance hint only — the AUTHORITATIVE rights gate is mapOpenverseLicense below, not this filter
       url.searchParams.set('page_size', String(q.limit ?? 20))
       const headers: Record<string, string> = {}
       if (config.token) headers.Authorization = `Bearer ${config.token}`

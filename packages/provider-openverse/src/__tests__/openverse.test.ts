@@ -54,6 +54,23 @@ describe('openverse provider', () => {
     expect(cc0.rights.rehostPolicy).toBe('cache-allowed')
   })
 
+  it('older CC-BY (non-4.0) maps to unknown and evaluates to needs-review', async () => {
+    const OLDER_CC_FIXTURE = {
+      results: [{
+        id: 'ccc', title: 'forest', creator: 'Charlie', creator_url: 'https://ex/charlie',
+        foreign_landing_url: 'https://ex/photo/ccc', url: 'https://cdn/ccc.jpg',
+        thumbnail: 'https://api.openverse.org/v1/images/ccc/thumb/',
+        width: 800, height: 600, license: 'by', license_version: '2.0',
+        license_url: 'https://creativecommons.org/licenses/by/2.0/',
+        attribution: '"forest" by Charlie is licensed under CC BY 2.0.',
+      }],
+    }
+    const refs = await openverse().search({ text: 'x', modalities: ['image'] }, ctxWith(OLDER_CC_FIXTURE))
+    const result = refs[0]
+    expect(result.rights.license).toBe('unknown')
+    expect(evaluateUse(result.rights, 'commercial-product').decision).toBe('needs-review')
+  })
+
   it('END-TO-END moat: a real by-nc-nd item maps to proprietary and is denied for commercial use', async () => {
     const refs = await openverse().search({ text: 'sky', modalities: ['image'] }, ctxWith(FIXTURE))
     const ncnd = refs[1]
