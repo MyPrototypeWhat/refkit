@@ -1,2 +1,36 @@
-// Public API barrel. Populated phase-by-phase — see the P0 implementation plan.
-export {}
+// Public API — @refkit/core P0.
+export type { Modality } from './modality'
+export { LICENSE_FACTS, factsFor } from './license'
+export type { LicenseId, LicenseFacts, Tri } from './license'
+export type { RehostPolicy, RightsRecord } from './rights'
+export { rightsRecordSchema } from './rights'
+export { buildAttribution } from './attribution'
+export type { Attribution, AttributionInput } from './attribution'
+export type {
+  Reference,
+  ReferenceMedia,
+  MediaPreview,
+  VisualMeta,
+  TextMeta,
+} from './reference'
+export { referenceSchema, parseReference } from './reference'
+export { fnv1a } from './hash'
+export { canonicalizeUrl, referenceId } from './dedup-key'
+export { hammingDistance, dedupeReferences } from './dedup'
+export type { DedupeOptions } from './dedup'
+export { mergeReferences } from './merge'
+export type { MergeOptions } from './merge'
+export { evaluateUse, NOT_LEGAL_ADVICE } from './evaluate-use'
+export type { Intent, Decision, Verdict } from './evaluate-use'
+export { defineProvider } from './provider'
+export type {
+  ReferenceProvider,
+  ProviderContext,
+  QueryFeature,
+  NormalizedQuery,
+  SearchFilters,
+  KeyValueCache,
+} from './provider'
+export { normalizeQuery } from './query'
+export { createRefkit } from './client'
+export type { RefkitClient, RefkitOptions, SearchInput, ProviderError } from './client'
