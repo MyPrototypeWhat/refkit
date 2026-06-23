@@ -15,6 +15,9 @@ export default defineConfig({
       './packages/provider-brave/vitest.config.ts',
       './packages/provider-flickr/vitest.config.ts',
       './packages/provider-wikimedia-commons/vitest.config.ts',
+      './packages/provider-met/vitest.config.ts',
+      './packages/provider-artic/vitest.config.ts',
+      './packages/provider-smithsonian/vitest.config.ts',
     ],
   },
 })
