@@ -1,0 +1,69 @@
+<!doctype html>
+<!--
+  refkit social / README card — open in any browser and screenshot the .card element
+  (your machine fetches the thumbnails fine; CI sandboxes often can't). Data below is
+  a real `refkit.search("lion")` across 4 sources, each result rights-tagged.
+-->
+<html>
+<head>
+<meta charset="utf-8" />
+<style>
+  body { margin: 0; background: #f8fafc; font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
+  .card { width: 1120px; padding: 36px 40px 40px; box-sizing: border-box; background: #ffffff; }
+  .eyebrow { font-size: 15px; color: #64748b; margin: 0 0 4px; }
+  .eyebrow code { background: #f1f5f9; padding: 2px 8px; border-radius: 6px; color: #334155; }
+  h1 { font-size: 30px; font-weight: 600; color: #0f172a; margin: 0 0 26px; letter-spacing: -0.01em; }
+  .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
+  .item { border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; background: #fff; }
+  .thumb { width: 100%; height: 180px; object-fit: cover; display: block; background: #f1f5f9; }
+  .body { padding: 14px 16px 16px; }
+  .title { font-size: 14px; font-weight: 500; color: #0f172a; line-height: 1.35; height: 38px; overflow: hidden; }
+  .src { font-size: 12px; color: #94a3b8; margin: 8px 0 9px; }
+  .row { display: flex; align-items: center; gap: 8px; }
+  .lic { font-size: 13px; font-weight: 600; color: #475569; }
+  .pill { font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 8px; }
+  .ok { background: #dcfce7; color: #166534; }
+  .attr { background: #ccfbf1; color: #115e59; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <p class="eyebrow">one <code>refkit.search("lion")</code> → 4 sources</p>
+    <h1>Every result arrives license-tagged.</h1>
+    <div class="grid">
+      <div class="item">
+        <img class="thumb" src="https://images.metmuseum.org/CRDImages/eg/web-large/DT226224.jpg" />
+        <div class="body">
+          <div class="title">Handle Depicting a Lion Subduing a Nubian</div>
+          <div class="src">via the&nbsp;met</div>
+          <div class="row"><span class="lic">CC0</span><span class="pill ok">allowed</span></div>
+        </div>
+      </div>
+      <div class="item">
+        <img class="thumb" src="https://www.artic.edu/iiif/2/1299b0e5-6a3d-8039-087b-35bf03caea1a/full/600,/0/default.jpg" />
+        <div class="body">
+          <div class="title">Lion Hunt — Eugène Delacroix</div>
+          <div class="src">via art institute of chicago</div>
+          <div class="row"><span class="lic">CC0</span><span class="pill ok">allowed</span></div>
+        </div>
+      </div>
+      <div class="item">
+        <img class="thumb" src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/Lion_%28Panthera_leo%29_male_6y.jpg/600px-Lion_%28Panthera_leo%29_male_6y.jpg" />
+        <div class="body">
+          <div class="title">Lion (Panthera leo) male 6y</div>
+          <div class="src">via wikimedia · © Charles&nbsp;J.&nbsp;Sharp</div>
+          <div class="row"><span class="lic">CC-BY-SA 4.0</span><span class="pill attr">+ attribution</span></div>
+        </div>
+      </div>
+      <div class="item">
+        <img class="thumb" src="https://api.openverse.org/v1/images/bf0009c1-883d-4823-9bc6-72e62ab36741/thumb/" />
+        <div class="body">
+          <div class="title">Lion</div>
+          <div class="src">via openverse · © Noveltyy</div>
+          <div class="row"><span class="lic">CC-BY 2.0</span><span class="pill attr">+ attribution</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
