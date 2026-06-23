@@ -22,7 +22,7 @@ const FLICKR_LICENSE: Record<number, { license: LicenseId; version?: string }> =
   4: { license: 'CC-BY', version: '2.0' },     // CC BY 2.0
   5: { license: 'CC-BY-SA', version: '2.0' },  // CC BY-SA 2.0
   6: { license: 'proprietary' },               // CC BY-ND 2.0
-  7: { license: 'PD' },                        // No known copyright restrictions
+  7: { license: 'unknown' },                   // "No known copyright restrictions" — NOT a guaranteed-free grant → needs-review
   8: { license: 'PD' },                        // United States Government Work
   9: { license: 'CC0-1.0' },                   // Public Domain Dedication (CC0)
   10: { license: 'PD' },                       // Public Domain Mark

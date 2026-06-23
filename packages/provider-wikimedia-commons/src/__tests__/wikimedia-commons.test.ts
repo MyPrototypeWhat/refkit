@@ -55,6 +55,8 @@ describe('mapCommonsLicense', () => {
     expect(mapCommonsLicense('cc-by-4.0')).toEqual({ license: 'CC-BY', version: '4.0' })
     expect(mapCommonsLicense('cc-by-2.0')).toEqual({ license: 'CC-BY', version: '2.0' })
     expect(mapCommonsLicense('cc-by-sa-3.0')).toEqual({ license: 'CC-BY-SA', version: '3.0' })
+    expect(mapCommonsLicense('cc-by-sa-2.5-in')).toEqual({ license: 'CC-BY-SA', version: '2.5' }) // jurisdiction port
+    expect(mapCommonsLicense('cc-by-3.0-us')).toEqual({ license: 'CC-BY', version: '3.0' })
     expect(mapCommonsLicense('cc-by-nc-2.0')).toEqual({ license: 'proprietary' })
     expect(mapCommonsLicense('cc-by-nd-4.0')).toEqual({ license: 'proprietary' })
     expect(mapCommonsLicense('pd')).toEqual({ license: 'PD' })

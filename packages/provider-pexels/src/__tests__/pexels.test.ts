@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { ProviderContext } from '@refkit/core'
+import { evaluateUse, type ProviderContext } from '@refkit/core'
 import { pexels, pexelsVideo } from '../index'
 
 const FIXTURE = {
@@ -57,5 +57,6 @@ describe('pexelsVideo provider', () => {
     expect(r.preview?.mediaType).toBe('video/mp4')
     expect(r.thumbnail?.url).toBe('https://images.pexels.com/videos/6394054/cat.jpg')
     expect(r.visual).toEqual({ width: 2560, height: 1440 })
+    expect(evaluateUse(r.rights, 'commercial-product').decision).toBe('allowed') // pexels license is commercial-OK
   })
 })

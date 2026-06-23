@@ -105,4 +105,11 @@ describe('openverseAudio provider', () => {
     expect(r.thumbnail?.url).toContain('waveform')
     expect(evaluateUse(r.rights, 'commercial-product').decision).toBe('allowed-with-attribution')
   })
+
+  it('a by-nc audio item maps to proprietary and is denied for commercial use (moat)', async () => {
+    const NC = { results: [{ ...AUDIO.results[0], license: 'by-nc', license_version: '3.0' }] }
+    const refs = await openverseAudio().search({ text: 'x', modalities: ['audio'] }, ctxWith(NC))
+    expect(refs[0].rights.license).toBe('proprietary')
+    expect(evaluateUse(refs[0].rights, 'commercial-product').decision).toBe('denied')
+  })
 })

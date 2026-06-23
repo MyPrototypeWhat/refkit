@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { ProviderContext } from '@refkit/core'
+import { evaluateUse, type ProviderContext } from '@refkit/core'
 import { pixabay, pixabayVideo } from '../index'
 
 const FIXTURE = {
@@ -62,5 +62,6 @@ describe('pixabayVideo provider', () => {
     expect(r.preview?.url).toBe('https://cdn.pixabay.com/vimeo/125/large.mp4')
     expect(r.thumbnail?.url).toBe('https://cdn.pixabay.com/vimeo/125/large.jpg')
     expect(r.visual).toEqual({ width: 1920, height: 1080 })
+    expect(evaluateUse(r.rights, 'commercial-product').decision).toBe('allowed') // pixabay license is commercial-OK
   })
 })

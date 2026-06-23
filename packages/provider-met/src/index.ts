@@ -66,9 +66,13 @@ export function met(config: MetConfig = {}) {
       if (!objectIDs || objectIDs.length === 0) return []
       const n = Math.min(config.maxObjects ?? q.limit ?? 12, 30)
       const objects = await Promise.all(objectIDs.slice(0, n).map(async (id) => {
-        const r = await ctx.fetch(`${BASE}/objects/${id}`, { signal: ctx.signal })
-        if (!r.ok) return null
-        return (await r.json()) as MetObject
+        try {
+          const r = await ctx.fetch(`${BASE}/objects/${id}`, { signal: ctx.signal })
+          if (!r.ok) return null
+          return (await r.json()) as MetObject
+        } catch {
+          return null // one bad object fetch must not drop the whole batch
+        }
       }))
       return objects
         .map((o) => (o ? toReference(o) : null))

@@ -18,9 +18,10 @@ export function mapCommonsLicense(code: string | undefined): { license: LicenseI
   if (!c) return { license: 'unknown' }
   if (c === 'cc0' || c.startsWith('cc0-')) return { license: 'CC0-1.0' }
   if (c.includes('-nc') || c.includes('-nd')) return { license: 'proprietary' }
-  const sa = c.match(/^cc-by-sa-(\d+\.\d+)$/)
+  // tolerate jurisdiction ports (e.g. cc-by-sa-2.5-in, cc-by-3.0-us) — same permission family
+  const sa = c.match(/^cc-by-sa-(\d+\.\d+)(?:-[a-z]{2,})?$/)
   if (sa) return { license: 'CC-BY-SA', version: sa[1] }
-  const by = c.match(/^cc-by-(\d+\.\d+)$/)
+  const by = c.match(/^cc-by-(\d+\.\d+)(?:-[a-z]{2,})?$/)
   if (by) return { license: 'CC-BY', version: by[1] }
   if (c === 'pd' || c.startsWith('pd-') || c.startsWith('public') || c.includes('publicdomain')) {
     return { license: 'PD' }

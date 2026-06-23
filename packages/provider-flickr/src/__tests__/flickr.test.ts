@@ -15,7 +15,7 @@ const FIXTURE = {
         url_l: 'https://live.staticflickr.com/1/111_b.jpg', width_l: 1024, height_l: 683,
       },
       {
-        id: '222', owner: 'gov@N00', title: 'Apollo 11 liftoff', license: '7', ownername: 'NASA',
+        id: '222', owner: 'gov@N00', title: 'Apollo 11 liftoff', license: '8', ownername: 'NASA',
         url_t: 'https://live.staticflickr.com/2/222_t.jpg', width_t: 100, height_t: 100,
         url_l: 'https://live.staticflickr.com/2/222_b.jpg', width_l: 1024, height_l: 1024,
       },
@@ -31,7 +31,7 @@ describe('mapFlickrLicense', () => {
     expect(mapFlickrLicense('5')).toEqual({ license: 'CC-BY-SA', version: '2.0' })
     expect(mapFlickrLicense(12)).toEqual({ license: 'CC-BY-SA', version: '4.0' })
     expect(mapFlickrLicense('9')).toEqual({ license: 'CC0-1.0' })
-    expect(mapFlickrLicense('7')).toEqual({ license: 'PD' })
+    expect(mapFlickrLicense('7')).toEqual({ license: 'unknown' }) // "no known copyright restrictions" is not a guaranteed-free grant
     expect(mapFlickrLicense('8')).toEqual({ license: 'PD' })
     expect(mapFlickrLicense('10')).toEqual({ license: 'PD' })
     expect(mapFlickrLicense('0')).toEqual({ license: 'proprietary' })  // All Rights Reserved

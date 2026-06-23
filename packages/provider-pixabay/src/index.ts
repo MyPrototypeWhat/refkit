@@ -72,8 +72,9 @@ interface PixabayVideoHit {
 }
 interface PixabayVideoResponse { hits: PixabayVideoHit[] }
 
-function toVideoReference(h: PixabayVideoHit): Reference {
+function toVideoReference(h: PixabayVideoHit): Reference | null {
   const v = h.videos.large ?? h.videos.medium ?? h.videos.small ?? h.videos.tiny
+  if (!v) return null // no usable rendition → skip rather than emit a preview-less reference
   const rights: RightsRecord = {
     license: 'pixabay',
     author: h.user,
@@ -88,8 +89,9 @@ function toVideoReference(h: PixabayVideoHit): Reference {
     canonicalUrl: h.pageURL,
     rights,
     verifiedAt: new Date().toISOString(),
-    ...(v?.thumbnail ? { thumbnail: { url: v.thumbnail } } : {}),
-    ...(v ? { preview: { url: v.url, mediaType: 'video/mp4', width: v.width, height: v.height }, visual: { width: v.width, height: v.height } } : {}),
+    ...(v.thumbnail ? { thumbnail: { url: v.thumbnail } } : {}),
+    preview: { url: v.url, mediaType: 'video/mp4', width: v.width, height: v.height },
+    visual: { width: v.width, height: v.height },
     relevance: 0,
     raw: h,
   }
@@ -109,7 +111,7 @@ export function pixabayVideo(config: PixabayConfig) {
       const res = await ctx.fetch(url.toString(), { signal: ctx.signal })
       if (!res.ok) throw new Error(`pixabay video search failed: ${res.status}`)
       const json = (await res.json()) as PixabayVideoResponse
-      return json.hits.map(toVideoReference)
+      return json.hits.map(toVideoReference).filter((r): r is Reference => r !== null)
     },
   })
 }
