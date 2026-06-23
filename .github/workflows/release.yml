@@ -12,24 +12,20 @@ jobs:
     permissions:
       contents: write       # changesets commits the version PR + tags
       pull-requests: write  # changesets opens the "Version Packages" PR
-      id-token: write       # OIDC trusted publishing — token-free npm publish
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22   # >= 22.14 required for OIDC trusted publishing
+          node-version: 22
           cache: pnpm
           registry-url: 'https://registry.npmjs.org'
-      - run: npm install -g npm@latest   # OIDC trusted publishing needs npm >= 11.5.1
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
       - run: pnpm test:run
-      # Trusted Publishing (OIDC) — no NPM_TOKEN. Preconditions:
-      #   1. repo is public; 2. each package already exists on npm (a brand-new
-      #   package's FIRST publish can't use OIDC — bootstrap once locally); and
-      #   3. each package has this repo + `release.yml` set as a trusted publisher.
-      # Provenance is generated automatically.
+      # Publishes with NPM_TOKEN. To switch to token-free OIDC later: add
+      # `id-token: write` above, `- run: npm i -g npm@latest`, drop the NPM_TOKEN
+      # env, and register this repo + release.yml as each package's trusted publisher.
       - name: Create release PR or publish
         uses: changesets/action@v1
         with:
@@ -37,3 +33,5 @@ jobs:
           publish: pnpm run release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
