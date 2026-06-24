@@ -39,6 +39,55 @@ describe('lexicalReranker', () => {
     expect(out.map((r) => r.id)).toEqual(['a', 'b'])
     expect(out.every((r) => r.relevance === 0)).toBe(true)
   })
+
+  it('breaks a lexical tie by resolution when qualityWeight > 0', async () => {
+    const refs = [
+      ref('low', 'red lion', { visual: { width: 100, height: 100 } }),
+      ref('high', 'red lion', { visual: { width: 4000, height: 3000 } }),
+    ]
+    const out = await lexicalReranker()({ query: 'red lion', refs })
+    expect(out[0].id).toBe('high')
+  })
+
+  it('spreads sources via MMR-lite instead of clustering one provider', async () => {
+    // 3 from "a", 1 from "b", all equal lexical score → default diversity must
+    // interleave "b" before the third "a".
+    const refs = [
+      ref('a1', 'lion', { source: { providerId: 'a', sourceUrl: 'https://x/a1' } }),
+      ref('a2', 'lion', { source: { providerId: 'a', sourceUrl: 'https://x/a2' } }),
+      ref('a3', 'lion', { source: { providerId: 'a', sourceUrl: 'https://x/a3' } }),
+      ref('b1', 'lion', { source: { providerId: 'b', sourceUrl: 'https://x/b1' } }),
+    ]
+    const out = await lexicalReranker()({ query: 'lion', refs })
+    const sources = out.map((r) => r.source.providerId)
+    expect(sources.slice(0, 2)).toEqual(['a', 'b']) // b promoted above the 2nd+ a
+  })
+
+  it('prefers a more permissive license on a tie when licenseWeight > 0', async () => {
+    const refs = [
+      ref('prop', 'lion', { rights: { license: 'proprietary', rehostPolicy: 'cache-allowed', raw: { sourceTerms: 't', sourceUrl: 'u' } } }),
+      ref('cc0', 'lion', { rights: { license: 'CC0-1.0', rehostPolicy: 'cache-allowed', raw: { sourceTerms: 't', sourceUrl: 'u' } } }),
+    ]
+    const out = await lexicalReranker({ licenseWeight: 0.5, sourceDiversity: 0 })({ query: 'lion', refs })
+    expect(out[0].id).toBe('cc0')
+  })
+
+  it('matches query tokens in the text excerpt, not just the title', async () => {
+    const refs = [
+      ref('title-only', 'untitled'),
+      ref('excerpt', 'untitled', { text: { excerpt: 'a quiet cyberpunk alley at dawn', excerptKind: 'passage' } }),
+    ]
+    const out = await lexicalReranker()({ query: 'cyberpunk alley', refs })
+    expect(out[0].id).toBe('excerpt')
+  })
+
+  it('clamps negative weights to 0 (keeps relevance in 0..1, ordering sane)', async () => {
+    const refs = [ref('a', 'red lion'), ref('b', 'blue whale')]
+    const out = await lexicalReranker({ lexicalWeight: -1, qualityWeight: 0, sourceDiversity: 0 })({ query: 'red lion', refs })
+    expect(out.every((r) => r.relevance >= 0 && r.relevance <= 1)).toBe(true)
+    // lexW clamps to 0 → all bases 0 → stable input order, no inverted ranking.
+    expect(out.map((r) => r.id)).toEqual(['a', 'b'])
+  })
 })
 
 describe('tokenize', () => {

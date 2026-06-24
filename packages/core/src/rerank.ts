@@ -1,4 +1,5 @@
 import type { Reference } from './reference'
+import type { LicenseId } from './license'
 
 /** The arguments a {@link Reranker} receives: the user query, the merged
  *  candidate refs (read-only — copy before reordering), and the search's
@@ -27,6 +28,7 @@ export function tokenize(text: string): string[] {
     .filter((t) => t.length > 1 && !STOPWORDS.has(t))
 }
 
+/** Tuning weights for {@link lexicalReranker}. All weights are clamped to ≥ 0. */
 export interface LexicalRerankOptions {
   /** Weight of the query↔(title+excerpt) term-coverage score. Default 1. */
   lexicalWeight?: number
@@ -47,20 +49,72 @@ function lexicalScore(queryTokens: string[], ref: Reference): number {
   return hit / queryTokens.length
 }
 
+const LICENSE_PERMISSIVENESS: Record<LicenseId, number> = {
+  'CC0-1.0': 1, PD: 1,
+  unsplash: 0.85, pexels: 0.85, pixabay: 0.85,
+  'CC-BY': 0.75, 'CC-BY-SA': 0.65,
+  unknown: 0.3, proprietary: 0.2,
+}
+
+/** Resolution (w×h) as a quality proxy, normalised to the batch max → 0..1; 0.5 when
+ *  unknown. Max-normalised, so one very large image compresses the rest — acceptable
+ *  at the default qualityWeight of 0.15. */
+function qualityScores(refs: readonly Reference[]): number[] {
+  const px = refs.map((r) => (r.visual ? r.visual.width * r.visual.height : 0))
+  const max = Math.max(...px, 1)
+  return px.map((p) => (p > 0 ? p / max : 0.5))
+}
+
 /**
- * Zero-dependency default reranker. Scores each ref by query term-coverage over
- * its title + excerpt (later: resolution + license weighting + source diversity),
- * sorts descending, and rewrites `relevance` to the normalised score so order and
- * relevance stay consistent. Model-based reranking is the host's job via the hook.
+ * Zero-dependency default reranker. Scores each ref by a weighted blend of query
+ * term-coverage (over title + excerpt), resolution quality, and license
+ * permissiveness, then greedily emits results with a small per-source diversity
+ * penalty (MMR-lite) so one provider can't dominate the top. `relevance` is
+ * rewritten to the normalised blended score. Model-based reranking is the host's
+ * job via the hook.
  */
 export function lexicalReranker(opts: LexicalRerankOptions = {}): Reranker {
-  const lexW = opts.lexicalWeight ?? 1
-  const total = lexW || 1
+  // Negative weights are meaningless — they'd invert ranking and flip the sign of
+  // the relevance normaliser (yielding a spurious relevance of 1) — so clamp to 0.
+  const w = (n: number | undefined, fallback: number) => Math.max(0, n ?? fallback)
+  const lexW = w(opts.lexicalWeight, 1)
+  const qualW = w(opts.qualityWeight, 0.15)
+  const licW = w(opts.licenseWeight, 0)
+  const divW = w(opts.sourceDiversity, 0.1)
+  const total = lexW + qualW + licW || 1
+
   return ({ query, refs }) => {
     const qTokens = [...new Set(tokenize(query))]
-    return refs
-      .map((r) => ({ ref: r, base: lexW * lexicalScore(qTokens, r) }))
-      .sort((a, b) => b.base - a.base)
-      .map((s) => ({ ...s.ref, relevance: Math.min(1, s.base / total) }))
+    const qual = qualityScores(refs)
+    const scored = refs.map((ref, i) => ({
+      ref,
+      base:
+        lexW * lexicalScore(qTokens, ref) +
+        qualW * qual[i] +
+        licW * LICENSE_PERMISSIVENESS[ref.rights.license],
+    }))
+
+    // Greedy MMR-lite: repeatedly take the best (base − diversity penalty for an
+    // already-picked source) so sources spread out instead of clustering.
+    const remaining = scored.slice()
+    const seen = new Map<string, number>()
+    const out: Reference[] = []
+    while (remaining.length > 0) {
+      let bestIdx = 0
+      let bestAdj = -Infinity
+      for (let i = 0; i < remaining.length; i++) {
+        const sid = remaining[i].ref.source.providerId
+        const adj = remaining[i].base - divW * (seen.get(sid) ?? 0)
+        if (adj > bestAdj) {
+          bestAdj = adj
+          bestIdx = i
+        }
+      }
+      const [pick] = remaining.splice(bestIdx, 1)
+      const sid = pick.ref.source.providerId
+      seen.set(sid, (seen.get(sid) ?? 0) + 1)
+      out.push({ ...pick.ref, relevance: Math.min(1, pick.base / total) })
+    }
+    return out
   }
 }
