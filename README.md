@@ -127,6 +127,14 @@ Audio/video are extra factories on existing packages: `openverseAudio()`, `pexel
 
 `@refkit/mcp` exposes `search_references` over the [Model Context Protocol](https://modelcontextprotocol.io), so any MCP-capable agent can search license-normalized references with zero glue code.
 
+**Zero-config** — point an MCP client at:
+
+```bash
+npx -y @refkit/mcp
+```
+
+It boots with the keyless sources (Met, Art Institute, Wikimedia, Openverse, Project Gutenberg, PoetryDB) and auto-adds any BYOK source whose key is in the environment (`UNSPLASH_KEY`, `PEXELS_KEY`, `BRAVE_TOKEN`, …). Pass `intent` to annotate each result with a use-verdict (may I use this, is attribution required); `gateFor` to return only allowed results. Or wire your own providers/keys via `serveStdio(createRefkit({ … }))` — see [`@refkit/mcp`](https://www.npmjs.com/package/@refkit/mcp).
+
 ## Not legal advice
 
 `evaluateUse` returns a **conservative heuristic** based on source-declared license/ToS facts. It is **not legal advice** and does not determine legal rights. Every verdict carries a `disclaimer` and a `confidence`. For real legal posture (especially feeding references into AI generation), consult counsel.

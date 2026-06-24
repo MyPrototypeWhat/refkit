@@ -48,6 +48,8 @@ Results are fused across sources with **Reciprocal Rank Fusion** (cross-source-o
 
 Rerank is opt-in and runs post-merge, before the `gateFor` license filter and the limit.
 
+Ranking is only as good as the candidate pool: `search` overfetches `limit × poolFactor` per provider (default 4×, capped per source) and narrows to `limit` after merge/rerank/gate — so dedup and ranking see a wide pool, not a source-truncated slice. Lower `poolFactor` when you query many providers.
+
 ## Invariants (enforced by `src/__tests__/no-network.test.ts`)
 
 - **Zero network** — no `fetch` call, no hard-coded endpoint in this package. Hosts inject `ProviderContext.fetch`.
