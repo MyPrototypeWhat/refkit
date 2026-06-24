@@ -59,13 +59,45 @@ importers:
       '@refkit/core':
         specifier: workspace:*
         version: link:../core
-      zod:
-        specifier: ^4.3.6
-        version: 4.4.3
-    devDependencies:
+      '@refkit/provider-artic':
+        specifier: workspace:*
+        version: link:../provider-artic
+      '@refkit/provider-brave':
+        specifier: workspace:*
+        version: link:../provider-brave
+      '@refkit/provider-flickr':
+        specifier: workspace:*
+        version: link:../provider-flickr
+      '@refkit/provider-gutendex':
+        specifier: workspace:*
+        version: link:../provider-gutendex
+      '@refkit/provider-met':
+        specifier: workspace:*
+        version: link:../provider-met
       '@refkit/provider-openverse':
         specifier: workspace:*
         version: link:../provider-openverse
+      '@refkit/provider-pexels':
+        specifier: workspace:*
+        version: link:../provider-pexels
+      '@refkit/provider-pixabay':
+        specifier: workspace:*
+        version: link:../provider-pixabay
+      '@refkit/provider-poetrydb':
+        specifier: workspace:*
+        version: link:../provider-poetrydb
+      '@refkit/provider-smithsonian':
+        specifier: workspace:*
+        version: link:../provider-smithsonian
+      '@refkit/provider-unsplash':
+        specifier: workspace:*
+        version: link:../provider-unsplash
+      '@refkit/provider-wikimedia-commons':
+        specifier: workspace:*
+        version: link:../provider-wikimedia-commons
+      zod:
+        specifier: ^4.3.6
+        version: 4.4.3
 
   packages/provider-artic:
     dependencies:

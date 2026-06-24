@@ -132,4 +132,43 @@ describe('createRefkit', () => {
     const out = await rk.search({ query: 'cyberpunk neon', modalities: ['image'], rerank: lexicalReranker() })
     expect(out[0].canonicalUrl).toBe('https://a/2')
   })
+
+  const capturing = (sink: { limit?: number }, count: number) =>
+    defineProvider({
+      id: 'cap',
+      modalities: ['image'],
+      queryFeatures: ['keyword'],
+      search: async (q) => {
+        sink.limit = q.limit
+        return Array.from({ length: count }, (_, i) => ref(`cap-${i}`, `https://cap/${i}`))
+      },
+    })
+
+  it('overfetches a wider pool per provider (limit × poolFactor), then narrows to limit', async () => {
+    const sink: { limit?: number } = {}
+    const rk = createRefkit({ providers: [capturing(sink, 50)] })
+    const out = await rk.search({ query: 'x', modalities: ['image'], limit: 5 })
+    expect(sink.limit).toBe(20) // 5 × default poolFactor (4)
+    expect(out).toHaveLength(5) // narrowed back to limit
+  })
+
+  it('respects an explicit poolFactor and clamps it to >= 1', async () => {
+    const sink: { limit?: number } = {}
+    const rk = createRefkit({ providers: [capturing(sink, 0)] })
+    await rk.search({ query: 'x', modalities: ['image'], limit: 10, poolFactor: 2 })
+    expect(sink.limit).toBe(20)
+    await rk.search({ query: 'x', modalities: ['image'], limit: 10, poolFactor: 0 })
+    expect(sink.limit).toBe(10) // clamped to 1 → no overfetch below limit
+    await rk.search({ query: 'x', modalities: ['image'], limit: 10, poolFactor: NaN })
+    expect(sink.limit).toBe(40) // non-finite → falls back to the default factor (4)
+  })
+
+  it('caps per-provider fetch at MAX_POOL_LIMIT, but never below an explicit limit', async () => {
+    const sink: { limit?: number } = {}
+    const rk = createRefkit({ providers: [capturing(sink, 0)] })
+    await rk.search({ query: 'x', modalities: ['image'], limit: 30 }) // 30×4=120 → capped to 100
+    expect(sink.limit).toBe(100)
+    await rk.search({ query: 'x', modalities: ['image'], limit: 150 }) // > cap → fetch the limit itself, not less
+    expect(sink.limit).toBe(150)
+  })
 })

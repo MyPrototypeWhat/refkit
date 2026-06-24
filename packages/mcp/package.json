@@ -7,6 +7,9 @@
   "keywords": ["refkit", "mcp", "model-context-protocol", "agent", "reference-retrieval", "license", "tool"],
   "main": "./src/index.ts",
   "types": "./src/index.ts",
+  "bin": {
+    "refkit-mcp": "./dist/cli.js"
+  },
   "exports": {
     ".": "./src/index.ts"
   },
@@ -19,11 +22,20 @@
   },
   "dependencies": {
     "@refkit/core": "workspace:*",
+    "@refkit/provider-artic": "workspace:*",
+    "@refkit/provider-brave": "workspace:*",
+    "@refkit/provider-flickr": "workspace:*",
+    "@refkit/provider-gutendex": "workspace:*",
+    "@refkit/provider-met": "workspace:*",
+    "@refkit/provider-openverse": "workspace:*",
+    "@refkit/provider-pexels": "workspace:*",
+    "@refkit/provider-pixabay": "workspace:*",
+    "@refkit/provider-poetrydb": "workspace:*",
+    "@refkit/provider-smithsonian": "workspace:*",
+    "@refkit/provider-unsplash": "workspace:*",
+    "@refkit/provider-wikimedia-commons": "workspace:*",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "zod": "^4.3.6"
-  },
-  "devDependencies": {
-    "@refkit/provider-openverse": "workspace:*"
   },
   "files": [
     "dist",

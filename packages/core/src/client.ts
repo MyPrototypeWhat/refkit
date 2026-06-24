@@ -28,6 +28,12 @@ export interface SearchInput {
   modalities: Modality[]
   filters?: SearchFilters
   limit?: number
+  /** Overfetch this many × `limit` candidates per provider before merge/rerank/gate,
+   *  then narrow to `limit` — a wider pool means better dedup + ranking. Default 4
+   *  (capped so a source is never asked for more than {@link MAX_POOL_LIMIT}); min 1.
+   *  Total fan-out is providers × fetchLimit — lower this when querying many providers
+   *  or when a source is rate-limited. */
+  poolFactor?: number
   signal?: AbortSignal
   gateFor?: Intent
   onProviderError?: (e: ProviderError) => void
@@ -42,6 +48,8 @@ export interface RefkitClient {
 }
 
 const DEFAULT_LIMIT = 30
+const DEFAULT_POOL_FACTOR = 4
+const MAX_POOL_LIMIT = 100 // never ask a single source for more than this, even at high limits
 
 export function createRefkit(options: RefkitOptions): RefkitClient {
   if (!options.providers || options.providers.length === 0) {
@@ -63,7 +71,19 @@ export function createRefkit(options: RefkitOptions): RefkitClient {
     if (chosen.length === 0) {
       throw new Error(`refkit.search: no registered provider supports modalities [${input.modalities.join(', ')}]`)
     }
-    const settled = await Promise.allSettled(chosen.map(p => p.search(normalizeQuery(input, p), ctx)))
+    const limit = input.limit ?? DEFAULT_LIMIT
+    const poolFactor = Math.max(1, Number.isFinite(input.poolFactor) ? (input.poolFactor as number) : DEFAULT_POOL_FACTOR)
+    // Overfetch a wider candidate pool per provider, then narrow to `limit` after
+    // merge/rerank/gate — you can't rank or dedup candidates you never fetched.
+    const fetchLimit = Math.max(limit, Math.min(Math.ceil(limit * poolFactor), MAX_POOL_LIMIT))
+    const settled = await Promise.allSettled(
+      chosen.map(p =>
+        p.search(
+          normalizeQuery({ query: input.query, modalities: input.modalities, filters: input.filters, limit: fetchLimit }, p),
+          ctx,
+        ),
+      ),
+    )
 
     const perSource: Reference[][] = []
     let anyOk = false
@@ -105,7 +125,7 @@ export function createRefkit(options: RefkitOptions): RefkitClient {
       const intent = input.gateFor
       refs = refs.filter(r => evaluateUse(r.rights, intent).decision.startsWith('allowed'))
     }
-    return refs.slice(0, input.limit ?? DEFAULT_LIMIT)
+    return refs.slice(0, limit)
   }
 
   return {
@@ -114,6 +134,7 @@ export function createRefkit(options: RefkitOptions): RefkitClient {
     buildAttribution: ref =>
       buildAttribution({
         license: ref.rights.license,
+        licenseVersion: ref.rights.licenseVersion,
         author: ref.rights.author,
         title: ref.title,
         canonicalUrl: ref.canonicalUrl,
