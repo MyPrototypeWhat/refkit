@@ -4,7 +4,7 @@ Neutral, dependency-light **reference-retrieval toolkit for creative work** — 
 
 ![One refkit.search("lion"), reranked, across multiple sources — every result arrives license-tagged](docs/hero.png)
 
-> Apache-2.0 · `v0.1.0` — first public release. The API surface (`createRefkit`) is stable; provider coverage is growing.
+> Apache-2.0 · `v0.2.0` — adds an opt-in, zero-dependency reranker (`lexicalReranker`). The API surface (`createRefkit`) is stable; provider coverage is growing.
 
 ## Why
 
@@ -52,6 +52,34 @@ for (const r of refs) {
 // Or gate at search time — only return commercially-usable results:
 const safe = await refkit.search({ query: 'forest', modalities: ['image'], gateFor: 'commercial-product' })
 ```
+
+## Ranking & rerank
+
+By default, results are fused across sources with **Reciprocal Rank Fusion** — cross-source-orderable, but not query-aware. For sharper relevance, pass a **reranker**:
+
+```ts
+import { createRefkit, lexicalReranker } from '@refkit/core'
+
+const refs = await refkit.search({
+  query: 'cyberpunk alley at night',
+  modalities: ['image'],
+  rerank: lexicalReranker(), // zero-dep, no model, no network
+})
+```
+
+`lexicalReranker(opts?)` is the batteries-included default: it scores each result by query↔(title+excerpt) term coverage, resolution quality, and license permissiveness, then spreads sources with MMR-lite so one provider can't dominate. All weights are tunable:
+
+```ts
+rerank: lexicalReranker({ qualityWeight: 0.3, licenseWeight: 0.2, sourceDiversity: 0.15 })
+```
+
+For **semantic** ranking, bring your own — the `Reranker` hook receives `{ query, refs, signal }` and returns reordered refs, so you can wire a CLIP/embedding/LLM reranker to your own API. `core` ships no model; this is the only seam:
+
+```ts
+rerank: async ({ query, refs }) => myEmbeddingRerank(query, refs)
+```
+
+Rerank is **opt-in** — omit it for the default RRF order. It runs post-merge, before the `gateFor` license filter and the limit.
 
 ## Providers
 
