@@ -93,6 +93,11 @@ export function createRefkit(options: RefkitOptions): RefkitClient {
     }
 
     let refs = mergeReferences(perSource, options.merge)
+    // Rerank runs over the FULL merged pool, before the license gate — ordering
+    // (and a reranker's batch-relative scoring, e.g. quality normalised across
+    // the pool) is computed against every candidate, then the gate drops denied
+    // ones while preserving order. Core does not re-validate the returned refs;
+    // a reranker is trusted to honour the Reranker contract.
     if (input.rerank) {
       refs = await input.rerank({ query: input.query, refs, signal: input.signal ?? options.signal })
     }

@@ -13,7 +13,14 @@ export interface RerankInput {
 
 /** A post-merge reordering strategy, injected via `SearchInput.rerank`. Pure or
  *  async — e.g. a CLIP/embedding reranker the host wires to its own API. Core
- *  ships no model; this is the only seam. */
+ *  ships no model; this is the only seam.
+ *
+ *  Core does NOT re-validate the returned refs (provider output is parsed at the
+ *  boundary, but a reranker's is trusted). A reranker MUST preserve the
+ *  `referenceSchema` invariants — notably `relevance` in 0..1 — and treat the
+ *  result as a reorder/subset: no dropped required fields, no dups or fabricated
+ *  refs. The input refs (and their nested `rights`/`visual`/`text` objects) are
+ *  the live merged set; reorder copies, never mutate them in place. */
 export type Reranker = (input: RerankInput) => Reference[] | Promise<Reference[]>
 
 const STOPWORDS = new Set([
@@ -62,7 +69,10 @@ const LICENSE_PERMISSIVENESS: Record<LicenseId, number> = {
  *  at the default qualityWeight of 0.15. */
 function qualityScores(refs: readonly Reference[]): number[] {
   const px = refs.map((r) => (r.visual ? r.visual.width * r.visual.height : 0))
-  const max = Math.max(...px, 1)
+  // Reduce, not Math.max(...px) — the merged pool can be large and a spread of
+  // that many args overflows the call stack. Floor at 1 keeps the division safe.
+  let max = 1
+  for (const p of px) if (p > max) max = p
   return px.map((p) => (p > 0 ? p / max : 0.5))
 }
 
@@ -75,9 +85,13 @@ function qualityScores(refs: readonly Reference[]): number[] {
  * job via the hook.
  */
 export function lexicalReranker(opts: LexicalRerankOptions = {}): Reranker {
-  // Negative weights are meaningless — they'd invert ranking and flip the sign of
-  // the relevance normaliser (yielding a spurious relevance of 1) — so clamp to 0.
-  const w = (n: number | undefined, fallback: number) => Math.max(0, n ?? fallback)
+  // Negative / non-finite weights are meaningless — they'd invert ranking or
+  // poison the relevance normaliser (NaN, or a spurious relevance of 1) — so any
+  // weight that isn't a positive finite number falls back to 0.
+  const w = (n: number | undefined, fallback: number) => {
+    const v = n ?? fallback
+    return Number.isFinite(v) && v > 0 ? v : 0
+  }
   const lexW = w(opts.lexicalWeight, 1)
   const qualW = w(opts.qualityWeight, 0.15)
   const licW = w(opts.licenseWeight, 0)

@@ -25,13 +25,14 @@ describe('lexicalReranker', () => {
     expect(out.map((r) => r.id)).toEqual(['b', 'a'])
   })
 
-  it('returns a single ref unchanged and rewrites relevance into 0..1', async () => {
+  it('returns a single ref unchanged and rewrites relevance to the normalised blend', async () => {
     const refs = [ref('a', 'cyberpunk city')]
     const out = await lexicalReranker()({ query: 'cyberpunk', refs })
     expect(out).toHaveLength(1)
     expect(out[0].id).toBe('a')
-    expect(out[0].relevance).toBeGreaterThan(0)
-    expect(out[0].relevance).toBeLessThanOrEqual(1)
+    // base = lexW·1 + qualW·0.5 (no visual) = 1 + 0.075 = 1.075; total = 1 + 0.15 = 1.15.
+    // Pins the denominator + blend so a wrong divisor can't hide behind ordering.
+    expect(out[0].relevance).toBeCloseTo(1.075 / 1.15, 5)
   })
 
   it('keeps input order and zeroes relevance when nothing matches (lexical-only)', async () => {
@@ -88,6 +89,12 @@ describe('lexicalReranker', () => {
     expect(out.every((r) => r.relevance >= 0 && r.relevance <= 1)).toBe(true)
     // lexW clamps to 0 → all bases 0 → stable input order, no inverted ranking.
     expect(out.map((r) => r.id)).toEqual(['a', 'b'])
+  })
+
+  it('treats a NaN weight as 0 instead of poisoning relevance with NaN', async () => {
+    const refs = [ref('a', 'red lion'), ref('b', 'blue whale')]
+    const out = await lexicalReranker({ lexicalWeight: NaN })({ query: 'red lion', refs })
+    expect(out.every((r) => Number.isFinite(r.relevance) && r.relevance >= 0 && r.relevance <= 1)).toBe(true)
   })
 })
 
