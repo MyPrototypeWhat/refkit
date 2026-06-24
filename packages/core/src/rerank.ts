@@ -3,7 +3,8 @@ import type { LicenseId } from './license'
 
 /** The arguments a {@link Reranker} receives: the user query, the merged
  *  candidate refs (read-only — copy before reordering), and the search's
- *  abort signal. */
+ *  abort signal. The `signal` is for BYO async/model rerankers; the bundled
+ *  {@link lexicalReranker} is synchronous and ignores it. */
 export interface RerankInput {
   query: string
   refs: readonly Reference[]

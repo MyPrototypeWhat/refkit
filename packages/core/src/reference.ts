@@ -30,7 +30,7 @@ export interface Reference {
   visual?: VisualMeta
   text?: TextMeta
   // — retrieval —
-  relevance: number // RRF fused score in 0..1; cross-source orderable, not absolute relevance
+  relevance: number // 0..1 orderable score; RRF-fused at merge, may be rewritten by a reranker
   raw?: unknown
 }
 
