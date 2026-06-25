@@ -105,6 +105,7 @@ export function wikimediaCommons(config: WikimediaCommonsConfig = {}) {
     id: 'wikimedia-commons',
     modalities: ['image'],
     queryFeatures: ['keyword'],
+    capabilities: { controls: [] },
     async search(q: NormalizedQuery, ctx: ProviderContext): Promise<Reference[]> {
       const url = new URL('https://commons.wikimedia.org/w/api.php')
       url.searchParams.set('action', 'query')

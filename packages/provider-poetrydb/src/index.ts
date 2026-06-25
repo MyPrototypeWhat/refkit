@@ -41,6 +41,7 @@ export function poetrydb() {
     id: 'poetrydb',
     modalities: ['text'],
     queryFeatures: ['keyword'],
+    capabilities: { controls: [] },
     async search(q: NormalizedQuery, ctx: ProviderContext): Promise<Reference[]> {
       // /lines/<term> finds poems whose line content contains the term (closest to keyword search)
       const url = `https://poetrydb.org/lines/${encodeURIComponent(q.text)}`

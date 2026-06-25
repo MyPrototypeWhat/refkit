@@ -39,6 +39,23 @@ describe('mapOpenverseLicense', () => {
 })
 
 describe('openverse provider', () => {
+  it('maps unified license controls to Openverse license_type', async () => {
+    let calledUrl = ''
+    const ctx: ProviderContext = {
+      fetch: (async (input: Parameters<typeof fetch>[0]) => {
+        calledUrl = String(input)
+        return new Response(JSON.stringify({ results: [] }), { status: 200 })
+      }) as typeof fetch,
+    }
+    await openverse().search({
+      text: 'sky',
+      modalities: ['image'],
+      controls: { license: { commercial: true, modification: true } },
+    }, ctx)
+    const url = new URL(calledUrl)
+    expect(url.searchParams.get('license_type')).toBe('commercial,modification')
+  })
+
   it('maps results to normalized References with correct provenance', async () => {
     const refs = await openverse().search({ text: 'sky', modalities: ['image'] }, ctxWith(FIXTURE))
     expect(refs).toHaveLength(2)

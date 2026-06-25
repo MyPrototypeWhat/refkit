@@ -61,9 +61,14 @@ export function gutendex(config: GutendexConfig = {}) {
     id: 'gutendex',
     modalities: ['text'],
     queryFeatures: ['keyword'],
+    capabilities: { controls: ['language', 'text.copyright', 'page'] },
     async search(q: NormalizedQuery, ctx: ProviderContext): Promise<Reference[]> {
       const url = new URL('https://gutendex.com/books/')
       url.searchParams.set('search', q.text)
+      if (q.controls?.language) url.searchParams.set('languages', q.controls.language)
+      if (q.controls?.text?.copyright === 'public-domain') url.searchParams.set('copyright', 'false')
+      if (q.controls?.text?.copyright === 'copyrighted') url.searchParams.set('copyright', 'true')
+      if (q.controls?.page) url.searchParams.set('page', String(q.controls.page))
       const res = await ctx.fetch(url.toString(), {
         headers: { 'User-Agent': config.userAgent ?? 'refkit (+https://github.com/MyPrototypeWhat/refkit)' },
         signal: ctx.signal,

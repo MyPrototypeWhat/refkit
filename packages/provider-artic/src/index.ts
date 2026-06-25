@@ -51,6 +51,7 @@ export function artic() {
     id: 'artic',
     modalities: ['image'],
     queryFeatures: ['keyword'],
+    capabilities: { controls: [] },
     async search(q: NormalizedQuery, ctx: ProviderContext): Promise<Reference[]> {
       const url = new URL('https://api.artic.edu/api/v1/artworks/search')
       url.searchParams.set('q', q.text)

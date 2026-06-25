@@ -46,6 +46,25 @@ describe('copyrightToLicense', () => {
 })
 
 describe('gutendex provider', () => {
+  it('maps unified text controls to Gutendex search params', async () => {
+    let calledUrl = ''
+    const ctx: ProviderContext = {
+      fetch: (async (input: Parameters<typeof fetch>[0]) => {
+        calledUrl = String(input)
+        return new Response(JSON.stringify({ results: [] }), { status: 200 })
+      }) as typeof fetch,
+    }
+    await gutendex().search({
+      text: 'great',
+      modalities: ['text'],
+      controls: { language: 'en', text: { copyright: 'public-domain' }, page: 2 },
+    }, ctx)
+    const url = new URL(calledUrl)
+    expect(url.searchParams.get('languages')).toBe('en')
+    expect(url.searchParams.get('copyright')).toBe('false')
+    expect(url.searchParams.get('page')).toBe('2')
+  })
+
   it('filters non-Text media and maps the rest to text References', async () => {
     const refs = await gutendex().search({ text: 'great expectations', modalities: ['text'] }, ctxWith(FIXTURE))
     expect(refs).toHaveLength(2) // the Sound record is filtered out

@@ -56,6 +56,7 @@ export function met(config: MetConfig = {}) {
     id: 'met',
     modalities: ['image'],
     queryFeatures: ['keyword'],
+    capabilities: { controls: [] },
     async search(q: NormalizedQuery, ctx: ProviderContext): Promise<Reference[]> {
       const searchUrl = new URL(`${BASE}/search`)
       searchUrl.searchParams.set('q', q.text)

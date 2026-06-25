@@ -47,6 +47,14 @@ export function mapOpenverseLicense(code: string): LicenseId {
   }
 }
 
+function openverseLicenseType(license: import('@refkit/core').SearchLicenseControls | undefined): string {
+  if (license?.allowUnknown) return 'all'
+  const types: string[] = []
+  if (license?.commercial) types.push('commercial')
+  if (license?.modification) types.push('modification')
+  return types.length > 0 ? types.join(',') : 'commercial,modification'
+}
+
 function toReference(r: OpenverseResult): Reference {
   const license = mapOpenverseLicense(r.license)
   const rights: RightsRecord = {
@@ -78,10 +86,11 @@ export function openverse(config: OpenverseConfig = {}) {
     id: 'openverse',
     modalities: ['image'],
     queryFeatures: ['keyword'],
+    capabilities: { controls: ['license.commercial', 'license.modification', 'license.allowUnknown'] },
     async search(q: NormalizedQuery, ctx: ProviderContext): Promise<Reference[]> {
       const url = new URL('https://api.openverse.org/v1/images/')
       url.searchParams.set('q', q.text)
-      url.searchParams.set('license_type', 'commercial,modification') // performance/relevance hint only — the AUTHORITATIVE rights gate is mapOpenverseLicense below, not this filter
+      url.searchParams.set('license_type', openverseLicenseType(q.controls?.license)) // performance/relevance hint only — the AUTHORITATIVE rights gate is mapOpenverseLicense below, not this filter
       url.searchParams.set('page_size', String(q.limit ?? 20))
       const headers: Record<string, string> = {}
       if (config.token) headers.Authorization = `Bearer ${config.token}`
@@ -143,10 +152,11 @@ export function openverseAudio(config: OpenverseConfig = {}) {
     id: 'openverse-audio',
     modalities: ['audio'],
     queryFeatures: ['keyword'],
+    capabilities: { controls: ['license.commercial', 'license.modification', 'license.allowUnknown'] },
     async search(q: NormalizedQuery, ctx: ProviderContext): Promise<Reference[]> {
       const url = new URL('https://api.openverse.org/v1/audio/')
       url.searchParams.set('q', q.text)
-      url.searchParams.set('license_type', 'commercial,modification') // relevance hint; mapOpenverseLicense authoritative
+      url.searchParams.set('license_type', openverseLicenseType(q.controls?.license)) // relevance hint; mapOpenverseLicense authoritative
       url.searchParams.set('page_size', String(q.limit ?? 20))
       const headers: Record<string, string> = {}
       if (config.token) headers.Authorization = `Bearer ${config.token}`
