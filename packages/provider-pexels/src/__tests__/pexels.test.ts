@@ -50,6 +50,27 @@ describe('pexels provider', () => {
     expect(url.searchParams.get('size')).toBe('large')
     expect(url.searchParams.get('page')).toBe('2')
   })
+
+  it('maps unified controls to documented Pexels photo search params', async () => {
+    let calledUrl = ''
+    const ctx: ProviderContext = {
+      fetch: (async (input: Parameters<typeof fetch>[0]) => {
+        calledUrl = String(input)
+        return new Response(JSON.stringify(FIXTURE), { status: 200 })
+      }) as typeof fetch,
+    }
+    await pexels({ apiKey: 'k' }).search({
+      text: 'trees',
+      modalities: ['image'],
+      controls: { orientation: 'portrait', color: '#ffffff', language: 'zh-CN', media: { size: 'large' }, page: 2 },
+    }, ctx)
+    const url = new URL(calledUrl)
+    expect(url.searchParams.get('orientation')).toBe('portrait')
+    expect(url.searchParams.get('color')).toBe('#ffffff')
+    expect(url.searchParams.get('locale')).toBe('zh-CN')
+    expect(url.searchParams.get('size')).toBe('large')
+    expect(url.searchParams.get('page')).toBe('2')
+  })
 })
 
 describe('pexelsVideo provider', () => {
@@ -95,6 +116,26 @@ describe('pexelsVideo provider', () => {
       modalities: ['video'],
       filters: { orientation: 'landscape', language: 'en-US' },
       providerOptions: { size: 'medium', page: 3 },
+    }, ctx)
+    const url = new URL(calledUrl)
+    expect(url.searchParams.get('orientation')).toBe('landscape')
+    expect(url.searchParams.get('locale')).toBe('en-US')
+    expect(url.searchParams.get('size')).toBe('medium')
+    expect(url.searchParams.get('page')).toBe('3')
+  })
+
+  it('maps unified controls to documented Pexels video search params', async () => {
+    let calledUrl = ''
+    const ctx: ProviderContext = {
+      fetch: (async (input: Parameters<typeof fetch>[0]) => {
+        calledUrl = String(input)
+        return new Response(JSON.stringify(VIDEO_FIXTURE), { status: 200 })
+      }) as typeof fetch,
+    }
+    await pexelsVideo({ apiKey: 'k' }).search({
+      text: 'cat',
+      modalities: ['video'],
+      controls: { orientation: 'landscape', language: 'en-US', media: { size: 'medium' }, page: 3 },
     }, ctx)
     const url = new URL(calledUrl)
     expect(url.searchParams.get('orientation')).toBe('landscape')

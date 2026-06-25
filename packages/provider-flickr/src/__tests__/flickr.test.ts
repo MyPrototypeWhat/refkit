@@ -97,4 +97,29 @@ describe('flickr provider', () => {
     expect(url.searchParams.get('tag_mode')).toBe('all')
     expect(url.searchParams.get('user_id')).toBe('99@N00')
   })
+
+  it('maps unified controls to documented Flickr search params', async () => {
+    let calledUrl = ''
+    const ctx: ProviderContext = {
+      fetch: (async (input: Parameters<typeof fetch>[0]) => {
+        calledUrl = String(input)
+        return new Response(JSON.stringify(FIXTURE), { status: 200 })
+      }) as typeof fetch,
+    }
+    await flickr({ apiKey: 'k' }).search({
+      text: 'sunset',
+      modalities: ['image'],
+      controls: {
+        sort: 'interesting',
+        safety: 'strict',
+        license: { commercial: true, modification: true },
+        creator: { id: '99@N00' },
+      },
+    }, ctx)
+    const url = new URL(calledUrl)
+    expect(url.searchParams.get('sort')).toBe('interestingness-desc')
+    expect(url.searchParams.get('safe_search')).toBe('1')
+    expect(url.searchParams.get('license')).toBe('4,5,9,10,11,12')
+    expect(url.searchParams.get('user_id')).toBe('99@N00')
+  })
 })

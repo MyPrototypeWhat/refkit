@@ -36,6 +36,11 @@ function setIfPositiveInt(url: URL, key: string, value: unknown) {
 }
 
 function applyPexelsSearchParams(url: URL, q: NormalizedQuery) {
+  if (q.controls?.orientation) url.searchParams.set('orientation', q.controls.orientation)
+  if (q.controls?.color) url.searchParams.set('color', q.controls.color)
+  if (q.controls?.language) url.searchParams.set('locale', q.controls.language)
+  if (q.controls?.media?.size) url.searchParams.set('size', q.controls.media.size)
+  if (q.controls?.page) url.searchParams.set('page', String(q.controls.page))
   if (q.filters?.orientation) url.searchParams.set('orientation', q.filters.orientation)
   if (q.filters?.color) url.searchParams.set('color', q.filters.color)
   if (q.filters?.language) url.searchParams.set('locale', q.filters.language)
@@ -73,6 +78,7 @@ export function pexels(config: PexelsConfig) {
     id: 'pexels',
     modalities: ['image'],
     queryFeatures: ['keyword', 'color', 'orientation', 'language'],
+    capabilities: { controls: ['orientation', 'color', 'language', 'media.size', 'page'] },
     async search(q: NormalizedQuery, ctx: ProviderContext): Promise<Reference[]> {
       const url = new URL('https://api.pexels.com/v1/search')
       url.searchParams.set('query', q.text)
@@ -133,6 +139,7 @@ export function pexelsVideo(config: PexelsConfig) {
     id: 'pexels-video',
     modalities: ['video'],
     queryFeatures: ['keyword', 'orientation', 'language'],
+    capabilities: { controls: ['orientation', 'language', 'media.size', 'page'] },
     async search(q: NormalizedQuery, ctx: ProviderContext): Promise<Reference[]> {
       const url = new URL('https://api.pexels.com/videos/search')
       url.searchParams.set('query', q.text)

@@ -89,12 +89,25 @@ export function pixabay(config: PixabayConfig) {
     id: 'pixabay',
     modalities: ['image'],
     queryFeatures: ['keyword', 'color', 'orientation', 'language'],
+    capabilities: { controls: ['orientation', 'color', 'language', 'sort', 'safety', 'media.kind', 'media.minWidth', 'media.minHeight'] },
     async search(q: NormalizedQuery, ctx: ProviderContext): Promise<Reference[]> {
       const url = new URL('https://pixabay.com/api/')
       url.searchParams.set('key', config.key)
       url.searchParams.set('q', q.text)
       url.searchParams.set('image_type', 'photo')
       url.searchParams.set('per_page', String(Math.min(Math.max(q.limit ?? 20, 3), 200)))
+      if (q.controls?.language) url.searchParams.set('lang', q.controls.language)
+      if (q.controls?.color) url.searchParams.set('colors', q.controls.color)
+      const controlsOrientation = pixabayOrientation(q.controls?.orientation)
+      if (controlsOrientation) url.searchParams.set('orientation', controlsOrientation)
+      if (q.controls?.sort === 'latest' || q.controls?.sort === 'popular') url.searchParams.set('order', q.controls.sort)
+      if (q.controls?.safety === 'strict') url.searchParams.set('safesearch', 'true')
+      if (q.controls?.safety === 'off') url.searchParams.set('safesearch', 'false')
+      if (q.controls?.media?.kind === 'photo' || q.controls?.media?.kind === 'illustration' || q.controls?.media?.kind === 'vector') {
+        url.searchParams.set('image_type', q.controls.media.kind)
+      }
+      if (q.controls?.media?.minWidth !== undefined) url.searchParams.set('min_width', String(q.controls.media.minWidth))
+      if (q.controls?.media?.minHeight !== undefined) url.searchParams.set('min_height', String(q.controls.media.minHeight))
       if (q.filters?.language) url.searchParams.set('lang', q.filters.language)
       if (q.filters?.color) url.searchParams.set('colors', q.filters.color)
       const orientation = pixabayOrientation(q.filters?.orientation)
@@ -157,11 +170,21 @@ export function pixabayVideo(config: PixabayConfig) {
     id: 'pixabay-video',
     modalities: ['video'],
     queryFeatures: ['keyword', 'language'],
+    capabilities: { controls: ['language', 'sort', 'safety', 'media.kind', 'media.minWidth', 'media.minHeight'] },
     async search(q: NormalizedQuery, ctx: ProviderContext): Promise<Reference[]> {
       const url = new URL('https://pixabay.com/api/videos/')
       url.searchParams.set('key', config.key)
       url.searchParams.set('q', q.text)
       url.searchParams.set('per_page', String(Math.min(Math.max(q.limit ?? 20, 3), 200)))
+      if (q.controls?.language) url.searchParams.set('lang', q.controls.language)
+      if (q.controls?.sort === 'latest' || q.controls?.sort === 'popular') url.searchParams.set('order', q.controls.sort)
+      if (q.controls?.safety === 'strict') url.searchParams.set('safesearch', 'true')
+      if (q.controls?.safety === 'off') url.searchParams.set('safesearch', 'false')
+      if (q.controls?.media?.kind === 'film' || q.controls?.media?.kind === 'animation') {
+        url.searchParams.set('video_type', q.controls.media.kind)
+      }
+      if (q.controls?.media?.minWidth !== undefined) url.searchParams.set('min_width', String(q.controls.media.minWidth))
+      if (q.controls?.media?.minHeight !== undefined) url.searchParams.set('min_height', String(q.controls.media.minHeight))
       if (q.filters?.language) url.searchParams.set('lang', q.filters.language)
       const opts = q.providerOptions as PixabayVideoSearchOptions | undefined
       setIfString(url, 'video_type', opts?.videoType, ['all', 'film', 'animation'])

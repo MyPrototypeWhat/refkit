@@ -63,10 +63,20 @@ export function unsplash(config: UnsplashConfig) {
     id: 'unsplash',
     modalities: ['image'],
     queryFeatures: ['keyword', 'color', 'orientation', 'language'],
+    capabilities: { controls: ['orientation', 'color', 'language', 'sort', 'safety'] },
     async search(q: NormalizedQuery, ctx: ProviderContext): Promise<Reference[]> {
       const url = new URL('https://api.unsplash.com/search/photos')
       url.searchParams.set('query', q.text)
       url.searchParams.set('per_page', String(Math.min(q.limit ?? 10, 30))) // Unsplash hard-caps per_page at 30; default kept low for free-tier rate limits
+      const controls = q.controls
+      if (controls?.color) url.searchParams.set('color', controls.color)
+      if (controls?.orientation) url.searchParams.set('orientation', controls.orientation === 'square' ? 'squarish' : controls.orientation)
+      if (controls?.language) url.searchParams.set('lang', controls.language)
+      if (controls?.sort === 'latest' || controls?.sort === 'relevance') {
+        url.searchParams.set('order_by', controls.sort === 'relevance' ? 'relevant' : controls.sort)
+      }
+      if (controls?.safety === 'strict') url.searchParams.set('content_filter', 'high')
+      if (controls?.safety === 'moderate') url.searchParams.set('content_filter', 'low')
       if (q.filters?.color) url.searchParams.set('color', q.filters.color)
       if (q.filters?.orientation) url.searchParams.set('orientation', q.filters.orientation === 'square' ? 'squarish' : q.filters.orientation)
       if (q.filters?.language) url.searchParams.set('lang', q.filters.language)

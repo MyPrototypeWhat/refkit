@@ -45,11 +45,12 @@ export function brave(config: BraveConfig) {
     id: 'brave',
     modalities: ['image'],
     queryFeatures: ['keyword'],
+    capabilities: { controls: ['safety'] },
     async search(q: NormalizedQuery, ctx: ProviderContext): Promise<Reference[]> {
       const url = new URL('https://api.search.brave.com/res/v1/images/search')
       url.searchParams.set('q', q.text)
       url.searchParams.set('count', String(Math.min(q.limit ?? 50, 200)))
-      url.searchParams.set('safesearch', config.safesearch ?? 'strict')
+      url.searchParams.set('safesearch', q.controls?.safety === 'off' ? 'off' : config.safesearch ?? 'strict')
       const res = await ctx.fetch(url.toString(), {
         headers: { 'X-Subscription-Token': config.token, Accept: 'application/json' },
         signal: ctx.signal,

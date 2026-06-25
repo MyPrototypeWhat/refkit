@@ -52,4 +52,17 @@ describe('brave provider', () => {
     expect(evaluateUse(refs[0].rights, 'commercial-product').decision).toBe('needs-review')
     expect(evaluateUse(refs[0].rights, 'ai-generation-input').decision).toBe('needs-review')
   })
+
+  it('maps unified safety controls to Brave safesearch', async () => {
+    let calledUrl = ''
+    const ctx: ProviderContext = {
+      fetch: (async (input: Parameters<typeof fetch>[0]) => {
+        calledUrl = String(input)
+        return new Response(JSON.stringify({ results: [] }), { status: 200 })
+      }) as typeof fetch,
+    }
+    await brave({ token: 't' }).search({ text: 'cat', modalities: ['image'], controls: { safety: 'off' } }, ctx)
+    const url = new URL(calledUrl)
+    expect(url.searchParams.get('safesearch')).toBe('off')
+  })
 })

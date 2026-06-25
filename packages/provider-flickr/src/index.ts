@@ -1,6 +1,6 @@
 import {
   defineProvider, referenceId,
-  type Reference, type RightsRecord, type LicenseId,
+  type Reference, type RightsRecord, type LicenseId, type SearchLicenseControls,
   type NormalizedQuery, type ProviderContext,
 } from '@refkit/core'
 
@@ -81,6 +81,28 @@ function setTags(url: URL, value: unknown) {
   if (Array.isArray(value) && value.every(v => typeof v === 'string')) url.searchParams.set('tags', value.join(','))
 }
 
+function flickrLicenseForControls(license: SearchLicenseControls | undefined): string | undefined {
+  if (!license) return undefined
+  if (license.allowUnknown) return DEFAULT_LICENSE_FILTER
+  if (license.commercial && license.modification) return '4,5,9,10,11,12'
+  if (license.commercial) return '4,5,8,9,10,11,12'
+  return undefined
+}
+
+function flickrSort(sort: string | undefined): string | undefined {
+  if (sort === 'interesting') return 'interestingness-desc'
+  if (sort === 'latest') return 'date-posted-desc'
+  if (sort === 'relevance') return 'relevance'
+  return undefined
+}
+
+function flickrSafeSearch(safety: string | undefined): 1 | 2 | 3 | undefined {
+  if (safety === 'strict') return 1
+  if (safety === 'moderate') return 2
+  if (safety === 'off') return 3
+  return undefined
+}
+
 function toReference(p: FlickrPhoto): Reference {
   const { license, version } = mapFlickrLicense(p.license)
   const canonicalUrl = `https://www.flickr.com/photos/${p.owner}/${p.id}`
@@ -116,21 +138,22 @@ export function flickr(config: FlickrConfig) {
     id: 'flickr',
     modalities: ['image'],
     queryFeatures: ['keyword'],
+    capabilities: { controls: ['sort', 'safety', 'license.commercial', 'license.modification', 'license.allowUnknown', 'creator.id'] },
     async search(q: NormalizedQuery, ctx: ProviderContext): Promise<Reference[]> {
       const opts = q.providerOptions as FlickrSearchOptions | undefined
       const url = new URL('https://api.flickr.com/services/rest/')
       url.searchParams.set('method', 'flickr.photos.search')
       url.searchParams.set('api_key', config.apiKey)
       url.searchParams.set('text', q.text)
-      url.searchParams.set('license', opts?.licenseFilter ?? config.licenseFilter ?? DEFAULT_LICENSE_FILTER)
+      url.searchParams.set('license', flickrLicenseForControls(q.controls?.license) ?? opts?.licenseFilter ?? config.licenseFilter ?? DEFAULT_LICENSE_FILTER)
       url.searchParams.set('content_type', '1') // photos only (no screenshots/other)
       url.searchParams.set('media', 'photos')
       url.searchParams.set('sort', 'relevance')
-      setIfString(url, 'sort', opts?.sort, ['date-posted-asc', 'date-posted-desc', 'date-taken-asc', 'date-taken-desc', 'interestingness-desc', 'interestingness-asc', 'relevance'])
-      setIfSafeSearch(url, opts?.safeSearch)
+      setIfString(url, 'sort', flickrSort(q.controls?.sort) ?? opts?.sort, ['date-posted-asc', 'date-posted-desc', 'date-taken-asc', 'date-taken-desc', 'interestingness-desc', 'interestingness-asc', 'relevance'])
+      setIfSafeSearch(url, flickrSafeSearch(q.controls?.safety) ?? opts?.safeSearch)
       setTags(url, opts?.tags)
       setIfString(url, 'tag_mode', opts?.tagMode, ['any', 'all'])
-      setIfString(url, 'user_id', opts?.userId)
+      setIfString(url, 'user_id', q.controls?.creator?.id ?? opts?.userId)
       url.searchParams.set('extras', 'license,owner_name,url_t,url_m,url_l')
       url.searchParams.set('per_page', String(q.limit ?? 20))
       url.searchParams.set('format', 'json')

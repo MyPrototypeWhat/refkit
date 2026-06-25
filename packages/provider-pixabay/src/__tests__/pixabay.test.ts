@@ -55,6 +55,34 @@ describe('pixabay provider', () => {
     expect(url.searchParams.get('order')).toBe('latest')
     expect(url.searchParams.get('editors_choice')).toBe('true')
   })
+
+  it('maps unified controls to documented Pixabay image search params', async () => {
+    let calledUrl = ''
+    const ctx: ProviderContext = {
+      fetch: (async (input: Parameters<typeof fetch>[0]) => { calledUrl = String(input); return new Response(JSON.stringify(FIXTURE), { status: 200 }) }) as typeof fetch,
+    }
+    await pixabay({ key: 'SECRET' }).search({
+      text: 'flowers',
+      modalities: ['image'],
+      controls: {
+        orientation: 'landscape',
+        color: 'blue',
+        language: 'de',
+        sort: 'latest',
+        safety: 'strict',
+        media: { kind: 'illustration', minWidth: 1200, minHeight: 800 },
+      },
+    }, ctx)
+    const url = new URL(calledUrl)
+    expect(url.searchParams.get('orientation')).toBe('horizontal')
+    expect(url.searchParams.get('colors')).toBe('blue')
+    expect(url.searchParams.get('lang')).toBe('de')
+    expect(url.searchParams.get('image_type')).toBe('illustration')
+    expect(url.searchParams.get('min_width')).toBe('1200')
+    expect(url.searchParams.get('min_height')).toBe('800')
+    expect(url.searchParams.get('safesearch')).toBe('true')
+    expect(url.searchParams.get('order')).toBe('latest')
+  })
 })
 
 describe('pixabayVideo provider', () => {
