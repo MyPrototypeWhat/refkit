@@ -165,10 +165,10 @@ export function createRefkitMcpServer(refkit: RefkitClient): McpServer {
       inputSchema: {
         query: z.string().describe('what to search for, e.g. "cyberpunk alley at night"'),
         modalities: z.array(z.enum(MODALITIES)).optional().describe('default ["image"]'),
-        filters: filtersSchema.optional().describe('portable search filters; unsupported filters are silently ignored per provider'),
+        filters: filtersSchema.optional().describe('compatibility alias for controls.orientation, controls.color, and controls.language'),
         controls: searchControlsSchema.optional().describe('provider-neutral search controls; providers translate supported controls and report ignored controls in explain metadata'),
         providerOptions: providerOptionsSchema.optional().describe('provider-specific search controls keyed by provider id; each provider whitelists supported keys'),
-        explain: z.boolean().optional().describe('include provider status, warnings, applied filters, and gate/drop metadata'),
+        explain: z.boolean().optional().describe('include provider status, applied and ignored controls, warnings, and gate/drop metadata'),
         limit: z.number().int().positive().optional(),
         intent: z.enum(INTENTS).optional().describe('annotate each result with a use-verdict for this intended use (no filtering)'),
         gateFor: z.enum(INTENTS).optional().describe('only return results whose license allows this intended use'),
