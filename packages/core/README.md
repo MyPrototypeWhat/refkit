@@ -39,6 +39,73 @@ for (const r of refs) {
 const safe = await refkit.search({ query: 'forest', modalities: ['image'], gateFor: 'commercial-product' })
 ```
 
+## Search controls
+
+Portable controls are expressed once and applied only to providers that declare support:
+
+```ts
+await refkit.search({
+  query: 'minimal workspace',
+  modalities: ['image'],
+  controls: {
+    orientation: 'landscape',
+    color: 'white',
+    language: 'en-US',
+  },
+})
+```
+
+Provider-specific escape hatches go under `providerOptions`, keyed by provider id. Core routes only the matching entry; providers own typed whitelists for the practical official search parameters they translate:
+
+```ts
+await refkit.search({
+  query: 'mountain trail',
+  modalities: ['image'],
+  controls: { orientation: 'landscape', safety: 'strict' },
+  providerOptions: {
+    unsplash: { collections: ['abc', 'def'], page: 2 },
+    flickr: { sort: 'relevance', tags: ['mountain', 'trail'], tagMode: 'all' },
+    openverse: { source: ['flickr'], category: 'photograph', aspectRatio: 'wide' },
+    smithsonian: { sort: 'newest', rows: 25 },
+  },
+})
+```
+
+`providerOptions` is not a raw upstream passthrough. Each provider package exports its own `*SearchOptions` interface and keeps response-format/debug/auth-only parameters out when they would conflict with normalized references or provider credentials.
+
+Currently supported unified controls:
+
+| Provider id | Unified controls |
+|---|---|
+| `unsplash` | `orientation`, `color`, `language`, `sort`, `safety` |
+| `pexels` | `orientation`, `color`, `language`, `media.size`, `page` |
+| `pexels-video` | `orientation`, `language`, `media.size`, `page` |
+| `pixabay` | `orientation`, `color`, `language`, `sort`, `safety`, `media.kind`, `media.minWidth`, `media.minHeight` |
+| `pixabay-video` | `language`, `sort`, `safety`, `media.kind`, `media.minWidth`, `media.minHeight` |
+| `flickr` | `sort`, `safety`, `license.commercial`, `license.modification`, `license.allowUnknown`, `creator.id` |
+| `brave` | `safety` |
+| `openverse` | `license.commercial`, `license.modification`, `license.allowUnknown` |
+| `openverse-audio` | `license.commercial`, `license.modification`, `license.allowUnknown` |
+| `gutendex` | `language`, `text.copyright`, `page` |
+| `poetrydb`, `wikimedia-commons`, `met`, `artic`, `smithsonian` | no unified controls in this release |
+
+Use `searchWithMeta` when a host UI or agent needs the search explanation layer:
+
+```ts
+const { references, meta } = await refkit.searchWithMeta({
+  query: 'minimal workspace',
+  modalities: ['image'],
+  controls: { orientation: 'landscape', color: 'white' },
+  gateFor: 'commercial-product',
+})
+
+meta.controls?.appliedByProvider
+meta.controls?.ignoredByProvider
+meta.providers // provider status: fulfilled / failed / skipped
+meta.gate      // before/after/dropped counts when gateFor is used
+meta.warnings  // partial-result and gate/drop notes
+```
+
 ## Ranking & rerank
 
 Results are fused across sources with **Reciprocal Rank Fusion** (cross-source-orderable, not query-aware). Pass an optional `rerank`:
@@ -49,6 +116,23 @@ Results are fused across sources with **Reciprocal Rank Fusion** (cross-source-o
 Rerank is opt-in and runs post-merge, before the `gateFor` license filter and the limit.
 
 Ranking is only as good as the candidate pool: `search` overfetches `limit × poolFactor` per provider (default 4×, capped per source) and narrows to `limit` after merge/rerank/gate — so dedup and ranking see a wide pool, not a source-truncated slice. Lower `poolFactor` when you query many providers.
+
+## Dedupe hooks
+
+Core dedupes exact canonical URLs by default and can dedupe equal-length perceptual hashes when `merge.hashThreshold` is set. Hosts that compute their own fingerprints or embeddings can add a sync duplicate predicate:
+
+```ts
+const refkit = createRefkit({
+  providers,
+  merge: {
+    isDuplicate: (candidate, existing) =>
+      (candidate.raw as { fingerprint?: string }).fingerprint ===
+      (existing.raw as { fingerprint?: string }).fingerprint,
+  },
+})
+```
+
+The hook compares `Reference` objects only. Core still never fetches, decodes, or stores media.
 
 ## Invariants (enforced by `src/__tests__/no-network.test.ts`)
 

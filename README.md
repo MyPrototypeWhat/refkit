@@ -53,6 +53,61 @@ for (const r of refs) {
 const safe = await refkit.search({ query: 'forest', modalities: ['image'], gateFor: 'commercial-product' })
 ```
 
+## Search controls
+
+Use provider-neutral `controls` for the main path. refkit routes each control only to providers that declare support, and `searchWithMeta()` explains which providers applied or ignored each control:
+
+```ts
+await refkit.search({
+  query: 'brutalist library interior',
+  modalities: ['image'],
+  controls: {
+    orientation: 'landscape',
+    color: 'blue',
+    language: 'en-US',
+    sort: 'relevance',
+    safety: 'strict',
+    license: { commercial: true, modification: true },
+    media: { minWidth: 1200, minHeight: 800 },
+  },
+})
+```
+
+Use `providerOptions` for provider-specific escape hatches that do not belong in the common contract. These are **typed whitelists**, not raw passthrough maps: each provider package translates the practical official search parameters it supports and ignores unsupported values.
+
+```ts
+await refkit.search({
+  query: 'forest path',
+  modalities: ['image'],
+  controls: { orientation: 'landscape', safety: 'strict' },
+  providerOptions: {
+    unsplash: { collections: ['abc', 'def'], page: 2 },
+    flickr: { tags: ['forest', 'path'], tagMode: 'all', minTakenDate: '2020-01-01' },
+    brave: { country: 'US', searchLang: 'en', spellcheck: false },
+    met: { departmentId: 11, isOnView: true },
+    gutendex: { topic: 'children', sort: 'popular' },
+  },
+})
+```
+
+The provider package owns its native options surface, e.g. `UnsplashSearchOptions`, `FlickrSearchOptions`, `OpenverseImageSearchOptions`, `MetSearchOptions`, and `PoetryDbSearchOptions`. Response-format/debug parameters and auth-only knobs are intentionally omitted when they would break refkit's normalized `Reference` contract.
+
+When an agent or UI needs to explain what happened, use `searchWithMeta`:
+
+```ts
+const { references, meta } = await refkit.searchWithMeta({
+  query: 'forest path',
+  modalities: ['image'],
+  controls: { orientation: 'landscape', color: 'green' },
+  gateFor: 'commercial-product',
+})
+
+console.log(meta.controls?.appliedByProvider)
+console.log(meta.controls?.ignoredByProvider)
+console.log(meta.providers)
+console.log(meta.warnings)
+```
+
 ## Ranking & rerank
 
 By default, results are fused across sources with **Reciprocal Rank Fusion** — cross-source-orderable, but not query-aware. For sharper relevance, pass a **reranker**:
@@ -80,6 +135,19 @@ rerank: async ({ query, refs }) => myEmbeddingRerank(query, refs)
 ```
 
 Rerank is **opt-in** — omit it for the default RRF order. It runs post-merge, before the `gateFor` license filter and the limit.
+
+URL dedupe is built in, and perceptual hashes are supported when providers or hosts supply them. For host-computed fingerprints or embeddings, add a duplicate hook without making core fetch or decode media:
+
+```ts
+const refkit = createRefkit({
+  providers,
+  merge: {
+    isDuplicate: (candidate, existing) =>
+      (candidate.raw as { fingerprint?: string }).fingerprint ===
+      (existing.raw as { fingerprint?: string }).fingerprint,
+  },
+})
+```
 
 ## Providers
 
@@ -123,7 +191,14 @@ Audio/video are extra factories on existing packages: `openverseAudio()`, `pexel
 - **No re-hosting** — keep `canonicalUrl` + thumbnails only; never store originals.
 - **strict-deny** — when rights can't be determined, deny / needs-review (never fail-open). Unknown, NonCommercial, NoDerivatives and "no known copyright restrictions" never map to a usable license.
 
-## Agent / MCP
+## Agent usage
+
+Agents can use refkit in two ways:
+
+1. **SDK inside a host tool** — your app defines its own `search` tool, wires `createRefkit({ providers, fetch, cache })`, and controls keys, caching, retries, rerankers, filters, and provider-specific options.
+2. **MCP adapter** — `@refkit/mcp` exposes the same license-normalized search over `search_references`, useful when you want a zero-glue tool that works across MCP-capable agents.
+
+## MCP
 
 `@refkit/mcp` exposes `search_references` over the [Model Context Protocol](https://modelcontextprotocol.io), so any MCP-capable agent can search license-normalized references with zero glue code.
 

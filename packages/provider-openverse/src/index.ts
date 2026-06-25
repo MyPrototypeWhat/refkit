@@ -9,6 +9,38 @@ export interface OpenverseConfig {
   token?: string
 }
 
+export interface OpenverseSearchOptions {
+  page?: number
+  pageSize?: number
+  source?: string | readonly string[]
+  excludedSource?: string | readonly string[]
+  tags?: string | readonly string[]
+  title?: string | readonly string[]
+  creator?: string | readonly string[]
+  collection?: 'tag' | 'source' | 'creator'
+  collectionTag?: string
+  license?: string | readonly string[]
+  licenseType?: 'all' | 'all-cc' | 'commercial' | 'modification'
+  filterDead?: boolean
+  extension?: string | readonly string[]
+  mature?: boolean
+  sortBy?: 'relevance' | 'indexed_on'
+  sortDir?: 'desc' | 'asc'
+  authority?: boolean
+  authorityBoost?: number
+  includeSensitiveResults?: boolean
+  category?: string | readonly string[]
+}
+
+export interface OpenverseImageSearchOptions extends OpenverseSearchOptions {
+  aspectRatio?: string | readonly string[]
+  size?: string | readonly string[]
+}
+
+export interface OpenverseAudioSearchOptions extends OpenverseSearchOptions {
+  length?: string | readonly string[]
+}
+
 interface OpenverseResult {
   id: string
   title: string | null
@@ -47,6 +79,76 @@ export function mapOpenverseLicense(code: string): LicenseId {
   }
 }
 
+function openverseLicenseType(license: import('@refkit/core').SearchLicenseControls | undefined): string {
+  if (license?.allowUnknown) return 'all'
+  const types: string[] = []
+  if (license?.commercial) types.push('commercial')
+  if (license?.modification) types.push('modification')
+  return types.length > 0 ? types.join(',') : 'commercial,modification'
+}
+
+function setIfPositiveInt(url: URL, key: string, value: unknown) {
+  if (typeof value !== 'number' || !Number.isInteger(value) || value < 1) return
+  url.searchParams.set(key, String(value))
+}
+
+function setIfString(url: URL, key: string, value: unknown, allowed?: readonly string[]) {
+  if (typeof value !== 'string' || !value) return
+  if (allowed && !allowed.includes(value)) return
+  url.searchParams.set(key, value)
+}
+
+function setIfStringList(url: URL, key: string, value: unknown) {
+  if (typeof value === 'string' && value) url.searchParams.set(key, value)
+  if (Array.isArray(value) && value.length > 0 && value.every(v => typeof v === 'string' && v)) url.searchParams.set(key, value.join(','))
+}
+
+function setIfBoolean(url: URL, key: string, value: unknown) {
+  if (typeof value !== 'boolean') return
+  url.searchParams.set(key, String(value))
+}
+
+function setIfNumber(url: URL, key: string, value: unknown, options?: { min?: number; max?: number }) {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return
+  if (options?.min !== undefined && value < options.min) return
+  if (options?.max !== undefined && value > options.max) return
+  url.searchParams.set(key, String(value))
+}
+
+function hasStringList(value: unknown): boolean {
+  return (typeof value === 'string' && value.length > 0)
+    || (Array.isArray(value) && value.some(v => typeof v === 'string' && v.length > 0))
+}
+
+function applyOpenverseSearchOptions(url: URL, opts: OpenverseSearchOptions | undefined) {
+  if (!opts) return
+  setIfPositiveInt(url, 'page', opts.page)
+  setIfPositiveInt(url, 'page_size', opts.pageSize)
+  setIfStringList(url, 'source', opts.source)
+  setIfStringList(url, 'excluded_source', opts.excludedSource)
+  const fieldSearch = hasStringList(opts.tags) || hasStringList(opts.title) || hasStringList(opts.creator)
+  if (fieldSearch) url.searchParams.delete('q')
+  setIfStringList(url, 'tags', opts.tags)
+  setIfStringList(url, 'title', opts.title)
+  setIfStringList(url, 'creator', opts.creator)
+  if (opts.collection === 'tag' || opts.collection === 'source' || opts.collection === 'creator') {
+    url.searchParams.delete('q')
+    setIfString(url, 'unstable__collection', opts.collection, ['tag', 'source', 'creator'])
+  }
+  setIfString(url, 'unstable__tag', opts.collectionTag)
+  setIfStringList(url, 'license', opts.license)
+  setIfString(url, 'license_type', opts.licenseType, ['all', 'all-cc', 'commercial', 'modification'])
+  setIfBoolean(url, 'filter_dead', opts.filterDead)
+  setIfStringList(url, 'extension', opts.extension)
+  setIfBoolean(url, 'mature', opts.mature)
+  setIfString(url, 'unstable__sort_by', opts.sortBy, ['relevance', 'indexed_on'])
+  setIfString(url, 'unstable__sort_dir', opts.sortDir, ['desc', 'asc'])
+  setIfBoolean(url, 'unstable__authority', opts.authority)
+  setIfNumber(url, 'unstable__authority_boost', opts.authorityBoost, { min: 0, max: 10 })
+  setIfBoolean(url, 'unstable__include_sensitive_results', opts.includeSensitiveResults)
+  setIfStringList(url, 'category', opts.category)
+}
+
 function toReference(r: OpenverseResult): Reference {
   const license = mapOpenverseLicense(r.license)
   const rights: RightsRecord = {
@@ -78,11 +180,16 @@ export function openverse(config: OpenverseConfig = {}) {
     id: 'openverse',
     modalities: ['image'],
     queryFeatures: ['keyword'],
+    capabilities: { controls: ['license.commercial', 'license.modification', 'license.allowUnknown'] },
     async search(q: NormalizedQuery, ctx: ProviderContext): Promise<Reference[]> {
       const url = new URL('https://api.openverse.org/v1/images/')
       url.searchParams.set('q', q.text)
-      url.searchParams.set('license_type', 'commercial,modification') // performance/relevance hint only — the AUTHORITATIVE rights gate is mapOpenverseLicense below, not this filter
+      url.searchParams.set('license_type', openverseLicenseType(q.controls?.license)) // performance/relevance hint only — the AUTHORITATIVE rights gate is mapOpenverseLicense below, not this filter
       url.searchParams.set('page_size', String(q.limit ?? 20))
+      const opts = q.providerOptions as OpenverseImageSearchOptions | undefined
+      applyOpenverseSearchOptions(url, opts)
+      setIfStringList(url, 'aspect_ratio', opts?.aspectRatio)
+      setIfStringList(url, 'size', opts?.size)
       const headers: Record<string, string> = {}
       if (config.token) headers.Authorization = `Bearer ${config.token}`
       const res = await ctx.fetch(url.toString(), { headers, signal: ctx.signal })
@@ -143,11 +250,15 @@ export function openverseAudio(config: OpenverseConfig = {}) {
     id: 'openverse-audio',
     modalities: ['audio'],
     queryFeatures: ['keyword'],
+    capabilities: { controls: ['license.commercial', 'license.modification', 'license.allowUnknown'] },
     async search(q: NormalizedQuery, ctx: ProviderContext): Promise<Reference[]> {
       const url = new URL('https://api.openverse.org/v1/audio/')
       url.searchParams.set('q', q.text)
-      url.searchParams.set('license_type', 'commercial,modification') // relevance hint; mapOpenverseLicense authoritative
+      url.searchParams.set('license_type', openverseLicenseType(q.controls?.license)) // relevance hint; mapOpenverseLicense authoritative
       url.searchParams.set('page_size', String(q.limit ?? 20))
+      const opts = q.providerOptions as OpenverseAudioSearchOptions | undefined
+      applyOpenverseSearchOptions(url, opts)
+      setIfStringList(url, 'length', opts?.length)
       const headers: Record<string, string> = {}
       if (config.token) headers.Authorization = `Bearer ${config.token}`
       const res = await ctx.fetch(url.toString(), { headers, signal: ctx.signal })

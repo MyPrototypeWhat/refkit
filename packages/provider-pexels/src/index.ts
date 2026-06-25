@@ -5,6 +5,15 @@ import {
 
 export interface PexelsConfig { apiKey: string }
 
+export interface PexelsSearchOptions {
+  orientation?: 'landscape' | 'portrait' | 'square'
+  color?: string
+  size?: 'large' | 'medium' | 'small'
+  locale?: string
+  page?: number
+  perPage?: number
+}
+
 interface PexelsPhoto {
   id: number
   width: number
@@ -17,6 +26,42 @@ interface PexelsPhoto {
   src: { tiny: string; medium: string; original: string }
 }
 interface PexelsResponse { photos: PexelsPhoto[] }
+
+function setIfString(url: URL, key: string, value: unknown, allowed?: readonly string[]) {
+  if (typeof value !== 'string') return
+  if (allowed && !allowed.includes(value)) return
+  url.searchParams.set(key, value)
+}
+
+function setIfPositiveInt(url: URL, key: string, value: unknown, max?: number) {
+  if (typeof value !== 'number' || !Number.isInteger(value) || value < 1) return
+  url.searchParams.set(key, String(max ? Math.min(value, max) : value))
+}
+
+function useLegacyFilter<T>(control: T | undefined, legacy: T | undefined): T | undefined {
+  return control === undefined ? legacy : undefined
+}
+
+function applyPexelsSearchParams(url: URL, q: NormalizedQuery, options?: { allowColor?: boolean }) {
+  if (q.controls?.orientation) url.searchParams.set('orientation', q.controls.orientation)
+  if (options?.allowColor && q.controls?.color) url.searchParams.set('color', q.controls.color)
+  if (q.controls?.language) url.searchParams.set('locale', q.controls.language)
+  if (q.controls?.media?.size) url.searchParams.set('size', q.controls.media.size)
+  if (q.controls?.page) url.searchParams.set('page', String(q.controls.page))
+  const legacyOrientation = useLegacyFilter(q.controls?.orientation, q.filters?.orientation)
+  if (legacyOrientation) url.searchParams.set('orientation', legacyOrientation)
+  const legacyColor = useLegacyFilter(q.controls?.color, q.filters?.color)
+  if (options?.allowColor && legacyColor) url.searchParams.set('color', legacyColor)
+  const legacyLanguage = useLegacyFilter(q.controls?.language, q.filters?.language)
+  if (legacyLanguage) url.searchParams.set('locale', legacyLanguage)
+  const opts = q.providerOptions as PexelsSearchOptions | undefined
+  setIfString(url, 'orientation', opts?.orientation, ['landscape', 'portrait', 'square'])
+  if (options?.allowColor) setIfString(url, 'color', opts?.color)
+  setIfString(url, 'size', opts?.size, ['large', 'medium', 'small'])
+  setIfString(url, 'locale', opts?.locale)
+  setIfPositiveInt(url, 'page', opts?.page)
+  setIfPositiveInt(url, 'per_page', opts?.perPage, 80)
+}
 
 function toReference(p: PexelsPhoto): Reference {
   const rights: RightsRecord = {
@@ -45,11 +90,13 @@ export function pexels(config: PexelsConfig) {
   return defineProvider({
     id: 'pexels',
     modalities: ['image'],
-    queryFeatures: ['keyword'],
+    queryFeatures: ['keyword', 'color', 'orientation', 'language'],
+    capabilities: { controls: ['orientation', 'color', 'language', 'media.size', 'page'] },
     async search(q: NormalizedQuery, ctx: ProviderContext): Promise<Reference[]> {
       const url = new URL('https://api.pexels.com/v1/search')
       url.searchParams.set('query', q.text)
       url.searchParams.set('per_page', String(Math.min(q.limit ?? 15, 80)))
+      applyPexelsSearchParams(url, q, { allowColor: true })
       const res = await ctx.fetch(url.toString(), { headers: { Authorization: config.apiKey }, signal: ctx.signal })
       if (!res.ok) throw new Error(`pexels search failed: ${res.status}`)
       const json = (await res.json()) as PexelsResponse
@@ -104,11 +151,13 @@ export function pexelsVideo(config: PexelsConfig) {
   return defineProvider({
     id: 'pexels-video',
     modalities: ['video'],
-    queryFeatures: ['keyword'],
+    queryFeatures: ['keyword', 'orientation', 'language'],
+    capabilities: { controls: ['orientation', 'language', 'media.size', 'page'] },
     async search(q: NormalizedQuery, ctx: ProviderContext): Promise<Reference[]> {
       const url = new URL('https://api.pexels.com/videos/search')
       url.searchParams.set('query', q.text)
       url.searchParams.set('per_page', String(Math.min(q.limit ?? 15, 80)))
+      applyPexelsSearchParams(url, q)
       const res = await ctx.fetch(url.toString(), { headers: { Authorization: config.apiKey }, signal: ctx.signal })
       if (!res.ok) throw new Error(`pexels video search failed: ${res.status}`)
       const json = (await res.json()) as PexelsVideoResponse

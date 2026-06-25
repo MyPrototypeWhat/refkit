@@ -34,4 +34,81 @@ describe('normalizeQuery', () => {
     expect(nq.text).toBe('cat')
     expect(nq.limit).toBe(10)
   })
+
+  it('passes only the matching providerOptions entry to the provider query', () => {
+    const nq = normalizeQuery(
+      {
+        query: 'cat',
+        modalities: ['image'],
+        providerOptions: {
+          p: { orderBy: 'latest' },
+          other: { orderBy: 'relevant' },
+        },
+      },
+      provider(['keyword']),
+    )
+    expect(nq.providerOptions).toEqual({ orderBy: 'latest' })
+  })
+
+  it('passes only provider-supported controls to the provider query', () => {
+    const p: ReferenceProvider = {
+      id: 'p',
+      modalities: ['image'],
+      queryFeatures: ['keyword'],
+      capabilities: { controls: ['orientation', 'media.minWidth'] },
+      search: async () => [],
+    }
+    const nq = normalizeQuery(
+      {
+        query: 'cat',
+        modalities: ['image'],
+        controls: {
+          orientation: 'landscape',
+          color: 'blue',
+          media: { minWidth: 1200, minHeight: 800 },
+        },
+      },
+      p,
+    )
+    expect(nq.controls).toEqual({ orientation: 'landscape', media: { minWidth: 1200 } })
+  })
+
+  it('maps legacy filters into controls for compatibility', () => {
+    const p: ReferenceProvider = {
+      id: 'p',
+      modalities: ['image'],
+      queryFeatures: ['keyword'],
+      capabilities: { controls: ['orientation', 'color', 'language'] },
+      search: async () => [],
+    }
+    const nq = normalizeQuery(
+      {
+        query: 'cat',
+        modalities: ['image'],
+        filters: { orientation: 'portrait', color: 'red', language: 'en-US' },
+      },
+      p,
+    )
+    expect(nq.controls).toEqual({ orientation: 'portrait', color: 'red', language: 'en-US' })
+  })
+
+  it('prefers primary controls over conflicting legacy filters when normalizing controls', () => {
+    const p: ReferenceProvider = {
+      id: 'p',
+      modalities: ['image'],
+      queryFeatures: ['keyword'],
+      capabilities: { controls: ['orientation', 'color', 'language'] },
+      search: async () => [],
+    }
+    const nq = normalizeQuery(
+      {
+        query: 'cat',
+        modalities: ['image'],
+        filters: { orientation: 'portrait', color: 'red', language: 'en-US' },
+        controls: { orientation: 'landscape', color: 'blue', language: 'fr' },
+      },
+      p,
+    )
+    expect(nq.controls).toEqual({ orientation: 'landscape', color: 'blue', language: 'fr' })
+  })
 })

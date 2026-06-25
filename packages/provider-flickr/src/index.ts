@@ -1,6 +1,6 @@
 import {
   defineProvider, referenceId,
-  type Reference, type RightsRecord, type LicenseId,
+  type Reference, type RightsRecord, type LicenseId, type SearchLicenseControls,
   type NormalizedQuery, type ProviderContext,
 } from '@refkit/core'
 
@@ -9,6 +9,38 @@ export interface FlickrConfig {
   /** Server-side license filter (comma-separated Flickr license ids). Defaults to the
    *  CC/PD/CC0 set — a relevance hint only; mapFlickrLicense below is authoritative. */
   licenseFilter?: string
+}
+
+export interface FlickrSearchOptions {
+  licenseFilter?: string
+  sort?: 'date-posted-asc' | 'date-posted-desc' | 'date-taken-asc' | 'date-taken-desc' | 'interestingness-desc' | 'interestingness-asc' | 'relevance'
+  safeSearch?: 1 | 2 | 3
+  tags?: string | readonly string[]
+  tagMode?: 'any' | 'all'
+  userId?: string
+  minUploadDate?: string | number
+  maxUploadDate?: string | number
+  minTakenDate?: string | number
+  maxTakenDate?: string | number
+  bbox?: string
+  accuracy?: number
+  machineTags?: string | readonly string[]
+  machineTagMode?: 'any' | 'all'
+  groupId?: string
+  woeId?: string
+  placeId?: string
+  hasGeo?: boolean
+  geoContext?: 0 | 1 | 2
+  lat?: string
+  lon?: string
+  radius?: number
+  radiusUnits?: 'mi' | 'km'
+  isCommons?: boolean
+  inGallery?: boolean
+  isGetty?: boolean
+  extras?: string | readonly string[]
+  page?: number
+  perPage?: number
 }
 
 // Flickr numeric license id → our LicenseId (+ CC version). See
@@ -56,6 +88,78 @@ interface FlickrPhoto {
 }
 interface FlickrResponse { photos?: { photo: FlickrPhoto[] }; stat: string }
 
+function setIfString(url: URL, key: string, value: unknown, allowed?: readonly string[]) {
+  if (typeof value !== 'string') return
+  if (allowed && !allowed.includes(value)) return
+  url.searchParams.set(key, value)
+}
+
+function setIfSafeSearch(url: URL, value: unknown) {
+  if (value !== 1 && value !== 2 && value !== 3) return
+  url.searchParams.set('safe_search', String(value))
+}
+
+function setTags(url: URL, value: unknown) {
+  if (typeof value === 'string' && value) url.searchParams.set('tags', value)
+  if (Array.isArray(value) && value.every(v => typeof v === 'string')) url.searchParams.set('tags', value.join(','))
+}
+
+function setStringOrNumber(url: URL, key: string, value: unknown) {
+  if (typeof value === 'string' && value) url.searchParams.set(key, value)
+  if (typeof value === 'number' && Number.isFinite(value)) url.searchParams.set(key, String(value))
+}
+
+function setStringList(url: URL, key: string, value: unknown) {
+  if (typeof value === 'string' && value) url.searchParams.set(key, value)
+  if (Array.isArray(value) && value.every(v => typeof v === 'string')) url.searchParams.set(key, value.join(','))
+}
+
+function setIfInt(url: URL, key: string, value: unknown, options?: { min?: number; max?: number }) {
+  if (typeof value !== 'number' || !Number.isInteger(value)) return
+  if (options?.min !== undefined && value < options.min) return
+  if (options?.max !== undefined && value > options.max) return
+  url.searchParams.set(key, String(value))
+}
+
+function setBooleanFlag(url: URL, key: string, value: unknown) {
+  if (typeof value !== 'boolean') return
+  url.searchParams.set(key, value ? '1' : '0')
+}
+
+function flickrExtras(value: unknown): string {
+  const required = ['license', 'owner_name', 'url_t', 'url_m', 'url_l']
+  const extras = new Set(required)
+  if (typeof value === 'string') {
+    for (const item of value.split(',')) if (item.trim()) extras.add(item.trim())
+  }
+  if (Array.isArray(value) && value.every(v => typeof v === 'string')) {
+    for (const item of value) if (item) extras.add(item)
+  }
+  return Array.from(extras).join(',')
+}
+
+function flickrLicenseForControls(license: SearchLicenseControls | undefined): string | undefined {
+  if (!license) return undefined
+  if (license.allowUnknown) return DEFAULT_LICENSE_FILTER
+  if (license.commercial && license.modification) return '4,5,9,10,11,12'
+  if (license.commercial) return '4,5,8,9,10,11,12'
+  return undefined
+}
+
+function flickrSort(sort: string | undefined): string | undefined {
+  if (sort === 'interesting') return 'interestingness-desc'
+  if (sort === 'latest') return 'date-posted-desc'
+  if (sort === 'relevance') return 'relevance'
+  return undefined
+}
+
+function flickrSafeSearch(safety: string | undefined): 1 | 2 | 3 | undefined {
+  if (safety === 'strict') return 1
+  if (safety === 'moderate') return 2
+  if (safety === 'off') return 3
+  return undefined
+}
+
 function toReference(p: FlickrPhoto): Reference {
   const { license, version } = mapFlickrLicense(p.license)
   const canonicalUrl = `https://www.flickr.com/photos/${p.owner}/${p.id}`
@@ -91,17 +195,46 @@ export function flickr(config: FlickrConfig) {
     id: 'flickr',
     modalities: ['image'],
     queryFeatures: ['keyword'],
+    capabilities: { controls: ['sort', 'safety', 'license.commercial', 'license.modification', 'license.allowUnknown', 'creator.id'] },
     async search(q: NormalizedQuery, ctx: ProviderContext): Promise<Reference[]> {
+      const opts = q.providerOptions as FlickrSearchOptions | undefined
       const url = new URL('https://api.flickr.com/services/rest/')
       url.searchParams.set('method', 'flickr.photos.search')
       url.searchParams.set('api_key', config.apiKey)
       url.searchParams.set('text', q.text)
-      url.searchParams.set('license', config.licenseFilter ?? DEFAULT_LICENSE_FILTER)
+      url.searchParams.set('license', opts?.licenseFilter ?? flickrLicenseForControls(q.controls?.license) ?? config.licenseFilter ?? DEFAULT_LICENSE_FILTER)
       url.searchParams.set('content_type', '1') // photos only (no screenshots/other)
       url.searchParams.set('media', 'photos')
       url.searchParams.set('sort', 'relevance')
-      url.searchParams.set('extras', 'license,owner_name,url_t,url_m,url_l')
+      setIfString(url, 'sort', opts?.sort ?? flickrSort(q.controls?.sort), ['date-posted-asc', 'date-posted-desc', 'date-taken-asc', 'date-taken-desc', 'interestingness-desc', 'interestingness-asc', 'relevance'])
+      setIfSafeSearch(url, opts?.safeSearch ?? flickrSafeSearch(q.controls?.safety))
+      setTags(url, opts?.tags)
+      setIfString(url, 'tag_mode', opts?.tagMode, ['any', 'all'])
+      setIfString(url, 'user_id', opts?.userId ?? q.controls?.creator?.id)
+      setStringOrNumber(url, 'min_upload_date', opts?.minUploadDate)
+      setStringOrNumber(url, 'max_upload_date', opts?.maxUploadDate)
+      setStringOrNumber(url, 'min_taken_date', opts?.minTakenDate)
+      setStringOrNumber(url, 'max_taken_date', opts?.maxTakenDate)
+      setIfString(url, 'bbox', opts?.bbox)
+      setIfInt(url, 'accuracy', opts?.accuracy, { min: 1, max: 16 })
+      setStringList(url, 'machine_tags', opts?.machineTags)
+      setIfString(url, 'machine_tag_mode', opts?.machineTagMode, ['any', 'all'])
+      setIfString(url, 'group_id', opts?.groupId)
+      setIfString(url, 'woe_id', opts?.woeId)
+      setIfString(url, 'place_id', opts?.placeId)
+      setBooleanFlag(url, 'has_geo', opts?.hasGeo)
+      setIfInt(url, 'geo_context', opts?.geoContext, { min: 0, max: 2 })
+      setIfString(url, 'lat', opts?.lat)
+      setIfString(url, 'lon', opts?.lon)
+      setStringOrNumber(url, 'radius', opts?.radius)
+      setIfString(url, 'radius_units', opts?.radiusUnits, ['mi', 'km'])
+      setBooleanFlag(url, 'is_commons', opts?.isCommons)
+      setBooleanFlag(url, 'in_gallery', opts?.inGallery)
+      setBooleanFlag(url, 'is_getty', opts?.isGetty)
+      url.searchParams.set('extras', flickrExtras(opts?.extras))
+      setIfInt(url, 'page', opts?.page, { min: 1 })
       url.searchParams.set('per_page', String(q.limit ?? 20))
+      setIfInt(url, 'per_page', opts?.perPage, { min: 1, max: 500 })
       url.searchParams.set('format', 'json')
       url.searchParams.set('nojsoncallback', '1')
       const res = await ctx.fetch(url.toString(), { signal: ctx.signal })

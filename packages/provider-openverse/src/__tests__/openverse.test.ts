@@ -39,6 +39,111 @@ describe('mapOpenverseLicense', () => {
 })
 
 describe('openverse provider', () => {
+  it('preserves the default Openverse license_type when both unified flags are enabled', async () => {
+    let calledUrl = ''
+    const ctx: ProviderContext = {
+      fetch: (async (input: Parameters<typeof fetch>[0]) => {
+        calledUrl = String(input)
+        return new Response(JSON.stringify({ results: [] }), { status: 200 })
+      }) as typeof fetch,
+    }
+    await openverse().search({
+      text: 'sky',
+      modalities: ['image'],
+      controls: { license: { commercial: true, modification: true } },
+    }, ctx)
+    const url = new URL(calledUrl)
+    expect(url.searchParams.get('license_type')).toBe('commercial,modification')
+  })
+
+  it('maps allowUnknown license control to Openverse license_type=all', async () => {
+    let calledUrl = ''
+    const ctx: ProviderContext = {
+      fetch: (async (input: Parameters<typeof fetch>[0]) => {
+        calledUrl = String(input)
+        return new Response(JSON.stringify({ results: [] }), { status: 200 })
+      }) as typeof fetch,
+    }
+    await openverse().search({
+      text: 'sky',
+      modalities: ['image'],
+      controls: { license: { allowUnknown: true } },
+    }, ctx)
+    const url = new URL(calledUrl)
+    expect(url.searchParams.get('license_type')).toBe('all')
+  })
+
+  it('maps a single unified commercial license flag to Openverse license_type=commercial', async () => {
+    let calledUrl = ''
+    const ctx: ProviderContext = {
+      fetch: (async (input: Parameters<typeof fetch>[0]) => {
+        calledUrl = String(input)
+        return new Response(JSON.stringify({ results: [] }), { status: 200 })
+      }) as typeof fetch,
+    }
+    await openverse().search({
+      text: 'sky',
+      modalities: ['image'],
+      controls: { license: { commercial: true, modification: false } },
+    }, ctx)
+    const url = new URL(calledUrl)
+    expect(url.searchParams.get('license_type')).toBe('commercial')
+  })
+
+  it('forwards documented Openverse image search options', async () => {
+    let calledUrl = ''
+    const ctx: ProviderContext = {
+      fetch: (async (input: Parameters<typeof fetch>[0]) => {
+        calledUrl = String(input)
+        return new Response(JSON.stringify({ results: [] }), { status: 200 })
+      }) as typeof fetch,
+    }
+    await openverse().search({
+      text: 'sky',
+      modalities: ['image'],
+      providerOptions: {
+        source: ['flickr', 'rawpixel'],
+        excludedSource: 'thingiverse',
+        tags: ['blue', 'sky'],
+        license: ['cc0', 'by'],
+        licenseType: 'all-cc',
+        filterDead: false,
+        extension: ['jpg', 'png'],
+        mature: true,
+        sortBy: 'indexed_on',
+        sortDir: 'desc',
+        authority: true,
+        authorityBoost: 2.5,
+        includeSensitiveResults: true,
+        category: ['photograph', 'illustration'],
+        aspectRatio: 'wide',
+        size: 'large',
+        page: 3,
+        pageSize: 17,
+      },
+    }, ctx)
+    const url = new URL(calledUrl)
+    expect(url.searchParams.get('q')).toBeNull()
+    expect(url.searchParams.get('source')).toBe('flickr,rawpixel')
+    expect(url.searchParams.get('excluded_source')).toBe('thingiverse')
+    expect(url.searchParams.get('tags')).toBe('blue,sky')
+    expect(url.searchParams.get('license')).toBe('cc0,by')
+    expect(url.searchParams.get('license_type')).toBe('all-cc')
+    expect(url.searchParams.get('filter_dead')).toBe('false')
+    expect(url.searchParams.get('extension')).toBe('jpg,png')
+    expect(url.searchParams.get('mature')).toBe('true')
+    expect(url.searchParams.get('unstable__sort_by')).toBe('indexed_on')
+    expect(url.searchParams.get('unstable__sort_dir')).toBe('desc')
+    expect(url.searchParams.get('unstable__authority')).toBe('true')
+    expect(url.searchParams.get('unstable__authority_boost')).toBe('2.5')
+    expect(url.searchParams.get('unstable__include_sensitive_results')).toBe('true')
+    expect(url.searchParams.get('category')).toBe('photograph,illustration')
+    expect(url.searchParams.get('aspect_ratio')).toBe('wide')
+    expect(url.searchParams.get('size')).toBe('large')
+    expect(url.searchParams.get('page')).toBe('3')
+    expect(url.searchParams.get('page_size')).toBe('17')
+  })
+
   it('maps results to normalized References with correct provenance', async () => {
     const refs = await openverse().search({ text: 'sky', modalities: ['image'] }, ctxWith(FIXTURE))
     expect(refs).toHaveLength(2)
@@ -104,6 +209,55 @@ describe('openverseAudio provider', () => {
     expect(r.preview?.mediaType).toBe('audio/mpeg')
     expect(r.thumbnail?.url).toContain('waveform')
     expect(evaluateUse(r.rights, 'commercial-product').decision).toBe('allowed-with-attribution')
+  })
+
+  it('shares the license_type helper with audio searches', async () => {
+    let calledUrl = ''
+    const ctx: ProviderContext = {
+      fetch: (async (input: Parameters<typeof fetch>[0]) => {
+        calledUrl = String(input)
+        return new Response(JSON.stringify({ results: [] }), { status: 200 })
+      }) as typeof fetch,
+    }
+    await openverseAudio().search({
+      text: 'piano',
+      modalities: ['audio'],
+      controls: { license: { allowUnknown: true } },
+    }, ctx)
+    const url = new URL(calledUrl)
+    expect(url.searchParams.get('license_type')).toBe('all')
+  })
+
+  it('forwards documented Openverse audio search options', async () => {
+    let calledUrl = ''
+    const ctx: ProviderContext = {
+      fetch: (async (input: Parameters<typeof fetch>[0]) => {
+        calledUrl = String(input)
+        return new Response(JSON.stringify({ results: [] }), { status: 200 })
+      }) as typeof fetch,
+    }
+    await openverseAudio().search({
+      text: 'piano',
+      modalities: ['audio'],
+      providerOptions: {
+        creator: 'benpm',
+        source: 'freesound',
+        category: 'music',
+        length: 'short',
+        page: 2,
+        pageSize: 9,
+      },
+    }, ctx)
+    const url = new URL(calledUrl)
+    expect(url.searchParams.get('q')).toBeNull()
+    expect(url.searchParams.get('creator')).toBe('benpm')
+    expect(url.searchParams.get('source')).toBe('freesound')
+    expect(url.searchParams.get('category')).toBe('music')
+    expect(url.searchParams.get('length')).toBe('short')
+    expect(url.searchParams.get('page')).toBe('2')
+    expect(url.searchParams.get('page_size')).toBe('9')
+    expect(url.searchParams.get('aspect_ratio')).toBeNull()
+    expect(url.searchParams.get('size')).toBeNull()
   })
 
   it('a by-nc audio item maps to proprietary and is denied for commercial use (moat)', async () => {

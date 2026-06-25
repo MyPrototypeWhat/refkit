@@ -40,12 +40,29 @@ await serveStdio(createRefkit({
 
 ## The `search_references` tool
 
-Input: `{ query, modalities?, limit?, intent?, gateFor? }`.
+Input: `{ query, modalities?, controls?, filters?, providerOptions?, explain?, limit?, intent?, gateFor? }`.
 
+- `controls` — provider-neutral search controls such as `{ orientation, color, language, sort, safety, license, media }`; providers translate supported controls and report ignored controls when `explain: true`.
 - `intent` — annotate each result with a **use-verdict** for that intended use (no filtering).
 - `gateFor` — return only results whose license allows that intent.
+- `filters` — compatibility alias for `controls.orientation`, `controls.color`, and `controls.language`.
+- `explain` — include provider status, applied and ignored unified controls, warnings, and gate/drop metadata.
+- `providerOptions` — typed provider-specific whitelisted controls keyed by provider id, for example:
 
-Output: `{ references: [{ id, title?, modality, provider, canonicalUrl, license, thumbnail?, excerpt?, useVerdict?, attribution? }] }`. When `intent` (or `gateFor`) is set, each result carries `useVerdict { decision, reason, confidence }` and — if the license requires it — a ready-to-use `attribution` credit line.
+```json
+{
+  "query": "forest path",
+  "modalities": ["image"],
+  "controls": { "orientation": "landscape", "color": "green", "safety": "strict" },
+  "providerOptions": {
+    "unsplash": { "collections": ["abc", "def"], "page": 2 },
+    "flickr": { "tags": ["forest", "path"], "tagMode": "all", "minTakenDate": "2020-01-01" },
+    "brave": { "country": "US", "searchLang": "en" }
+  }
+}
+```
+
+Output: `{ references: [{ id, title?, modality, provider, canonicalUrl, license, thumbnail?, excerpt?, useVerdict?, useExplanation?, attribution? }], meta? }`. When `intent` (or `gateFor`) is set, each result carries `useVerdict { decision, reason, confidence }`, a plain `useExplanation`, and — if the license requires it — a ready-to-use `attribution` credit line. When `explain: true`, `meta` includes per-provider `fulfilled` / `failed` / `skipped` status, applied/ignored control details, warnings, and gate/drop counts.
 
 > Results are references with a license id + source link — **not rights clearance, not legal advice**. `unknown` / `needs-review` results require the caller to verify the source's terms.
 

@@ -29,10 +29,32 @@ export type {
   QueryFeature,
   NormalizedQuery,
   SearchFilters,
+  SearchControls,
+  SearchControlKey,
+  SearchSort,
+  SearchSafety,
+  SearchLicenseControls,
+  SearchMediaControls,
+  SearchCreatorControls,
+  SearchTextControls,
+  ProviderCapabilities,
+  ProviderOptionValue,
+  ProviderOptions,
+  ProviderOptionsById,
   KeyValueCache,
 } from './provider'
 export { normalizeQuery } from './query'
 export { createRefkit } from './client'
-export type { RefkitClient, RefkitOptions, SearchInput, ProviderError } from './client'
+export type {
+  RefkitClient,
+  RefkitOptions,
+  SearchInput,
+  SearchResult,
+  SearchMeta,
+  SearchControlsMeta,
+  SearchGateMeta,
+  ProviderSearchStatus,
+  ProviderError,
+} from './client'
 export { lexicalReranker, tokenize } from './rerank'
 export type { Reranker, RerankInput, LexicalRerankOptions } from './rerank'
