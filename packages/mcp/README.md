@@ -46,7 +46,7 @@ Input: `{ query, modalities?, controls?, filters?, providerOptions?, explain?, l
 - `intent` — annotate each result with a **use-verdict** for that intended use (no filtering).
 - `gateFor` — return only results whose license allows that intent.
 - `filters` — compatibility alias for `controls.orientation`, `controls.color`, and `controls.language`.
-- `explain` — include provider status, partial-result warnings, applied filters, and gate/drop metadata.
+- `explain` — include provider status, applied and ignored unified controls, warnings, and gate/drop metadata.
 - `providerOptions` — source-specific controls keyed by provider id, for example:
 
 ```json
@@ -61,7 +61,7 @@ Input: `{ query, modalities?, controls?, filters?, providerOptions?, explain?, l
 }
 ```
 
-Output: `{ references: [{ id, title?, modality, provider, canonicalUrl, license, thumbnail?, excerpt?, useVerdict?, useExplanation?, attribution? }], meta? }`. When `intent` (or `gateFor`) is set, each result carries `useVerdict { decision, reason, confidence }`, a plain `useExplanation`, and — if the license requires it — a ready-to-use `attribution` credit line. When `explain: true`, `meta` includes per-provider `fulfilled` / `failed` / `skipped` status, warnings, and gate/drop counts.
+Output: `{ references: [{ id, title?, modality, provider, canonicalUrl, license, thumbnail?, excerpt?, useVerdict?, useExplanation?, attribution? }], meta? }`. When `intent` (or `gateFor`) is set, each result carries `useVerdict { decision, reason, confidence }`, a plain `useExplanation`, and — if the license requires it — a ready-to-use `attribution` credit line. When `explain: true`, `meta` includes per-provider `fulfilled` / `failed` / `skipped` status, applied/ignored control details, warnings, and gate/drop counts.
 
 > Results are references with a license id + source link — **not rights clearance, not legal advice**. `unknown` / `needs-review` results require the caller to verify the source's terms.
 
