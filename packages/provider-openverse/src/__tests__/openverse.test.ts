@@ -39,7 +39,7 @@ describe('mapOpenverseLicense', () => {
 })
 
 describe('openverse provider', () => {
-  it('maps unified license controls to Openverse license_type', async () => {
+  it('preserves the default Openverse license_type when both unified flags are enabled', async () => {
     let calledUrl = ''
     const ctx: ProviderContext = {
       fetch: (async (input: Parameters<typeof fetch>[0]) => {
@@ -54,6 +54,40 @@ describe('openverse provider', () => {
     }, ctx)
     const url = new URL(calledUrl)
     expect(url.searchParams.get('license_type')).toBe('commercial,modification')
+  })
+
+  it('maps allowUnknown license control to Openverse license_type=all', async () => {
+    let calledUrl = ''
+    const ctx: ProviderContext = {
+      fetch: (async (input: Parameters<typeof fetch>[0]) => {
+        calledUrl = String(input)
+        return new Response(JSON.stringify({ results: [] }), { status: 200 })
+      }) as typeof fetch,
+    }
+    await openverse().search({
+      text: 'sky',
+      modalities: ['image'],
+      controls: { license: { allowUnknown: true } },
+    }, ctx)
+    const url = new URL(calledUrl)
+    expect(url.searchParams.get('license_type')).toBe('all')
+  })
+
+  it('maps a single unified commercial license flag to Openverse license_type=commercial', async () => {
+    let calledUrl = ''
+    const ctx: ProviderContext = {
+      fetch: (async (input: Parameters<typeof fetch>[0]) => {
+        calledUrl = String(input)
+        return new Response(JSON.stringify({ results: [] }), { status: 200 })
+      }) as typeof fetch,
+    }
+    await openverse().search({
+      text: 'sky',
+      modalities: ['image'],
+      controls: { license: { commercial: true, modification: false } },
+    }, ctx)
+    const url = new URL(calledUrl)
+    expect(url.searchParams.get('license_type')).toBe('commercial')
   })
 
   it('maps results to normalized References with correct provenance', async () => {
@@ -121,6 +155,23 @@ describe('openverseAudio provider', () => {
     expect(r.preview?.mediaType).toBe('audio/mpeg')
     expect(r.thumbnail?.url).toContain('waveform')
     expect(evaluateUse(r.rights, 'commercial-product').decision).toBe('allowed-with-attribution')
+  })
+
+  it('shares the license_type helper with audio searches', async () => {
+    let calledUrl = ''
+    const ctx: ProviderContext = {
+      fetch: (async (input: Parameters<typeof fetch>[0]) => {
+        calledUrl = String(input)
+        return new Response(JSON.stringify({ results: [] }), { status: 200 })
+      }) as typeof fetch,
+    }
+    await openverseAudio().search({
+      text: 'piano',
+      modalities: ['audio'],
+      controls: { license: { allowUnknown: true } },
+    }, ctx)
+    const url = new URL(calledUrl)
+    expect(url.searchParams.get('license_type')).toBe('all')
   })
 
   it('a by-nc audio item maps to proprietary and is denied for commercial use (moat)', async () => {
