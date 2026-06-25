@@ -2,17 +2,37 @@ import { readFileSync } from 'node:fs'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod'
-import type { RefkitClient, Reference, Verdict, Attribution, SearchFilters, SearchControls, ProviderOptionsById, SearchMeta } from '@refkit/core'
+import type { RefkitClient, Reference, Verdict, Attribution, SearchFilters, SearchControls, SearchControlKey, ProviderOptionsById, SearchMeta } from '@refkit/core'
 
 const MODALITIES = ['image', 'video', 'audio', 'text'] as const
 const INTENTS = ['internal-moodboard', 'commercial-product', 'ai-generation-input', 'redistribution'] as const
 const ORIENTATIONS = ['landscape', 'portrait', 'square'] as const
+const SEARCH_CONTROL_KEYS = [
+  'orientation',
+  'color',
+  'language',
+  'sort',
+  'safety',
+  'license.commercial',
+  'license.modification',
+  'license.allowUnknown',
+  'media.kind',
+  'media.size',
+  'media.minWidth',
+  'media.minHeight',
+  'media.duration',
+  'creator.id',
+  'creator.name',
+  'text.copyright',
+  'page',
+] as const satisfies readonly SearchControlKey[]
 
 const filtersSchema = z.object({
   color: z.string().optional(),
   orientation: z.enum(ORIENTATIONS).optional(),
   language: z.string().optional(),
 })
+const searchControlKeySchema = z.enum(SEARCH_CONTROL_KEYS)
 
 const searchControlsSchema = z.object({
   orientation: z.enum(ORIENTATIONS).optional(),
@@ -106,9 +126,9 @@ const searchMetaSchema: z.ZodType<SearchMeta> = z.object({
   fetchLimit: z.number(),
   appliedFilters: filtersSchema.optional(),
   controls: z.object({
-    requested: z.array(z.string()),
-    appliedByProvider: z.record(z.string(), z.array(z.string())),
-    ignoredByProvider: z.record(z.string(), z.array(z.string())),
+    requested: z.array(searchControlKeySchema),
+    appliedByProvider: z.record(z.string(), z.array(searchControlKeySchema)),
+    ignoredByProvider: z.record(z.string(), z.array(searchControlKeySchema)),
   }).optional(),
   providerOptions: z.array(z.string()).optional(),
   providers: z.array(z.object({

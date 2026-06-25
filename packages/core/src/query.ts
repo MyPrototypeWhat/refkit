@@ -66,12 +66,13 @@ function setControl(out: SearchControls, key: SearchControlKey, controls: Search
 }
 
 export function requestedControlKeys(controls: SearchControls): SearchControlKey[] {
-  return [
+  const allControlKeys: SearchControlKey[] = [
     'orientation', 'color', 'language', 'sort', 'safety',
     'license.commercial', 'license.modification', 'license.allowUnknown',
     'media.kind', 'media.size', 'media.minWidth', 'media.minHeight', 'media.duration',
     'creator.id', 'creator.name', 'text.copyright', 'page',
-  ].filter(key => hasControl(controls, key))
+  ]
+  return allControlKeys.filter(key => hasControl(controls, key))
 }
 
 export function supportedControlKeys(provider: ReferenceProvider, controls: SearchControls): SearchControlKey[] {
