@@ -35,14 +35,14 @@ function setIfPositiveInt(url: URL, key: string, value: unknown) {
   url.searchParams.set(key, String(value))
 }
 
-function applyPexelsSearchParams(url: URL, q: NormalizedQuery) {
+function applyPexelsSearchParams(url: URL, q: NormalizedQuery, options?: { allowColor?: boolean }) {
   if (q.controls?.orientation) url.searchParams.set('orientation', q.controls.orientation)
-  if (q.controls?.color) url.searchParams.set('color', q.controls.color)
+  if (options?.allowColor && q.controls?.color) url.searchParams.set('color', q.controls.color)
   if (q.controls?.language) url.searchParams.set('locale', q.controls.language)
   if (q.controls?.media?.size) url.searchParams.set('size', q.controls.media.size)
   if (q.controls?.page) url.searchParams.set('page', String(q.controls.page))
   if (q.filters?.orientation) url.searchParams.set('orientation', q.filters.orientation)
-  if (q.filters?.color) url.searchParams.set('color', q.filters.color)
+  if (options?.allowColor && q.filters?.color) url.searchParams.set('color', q.filters.color)
   if (q.filters?.language) url.searchParams.set('locale', q.filters.language)
   const opts = q.providerOptions as PexelsSearchOptions | undefined
   setIfString(url, 'size', opts?.size, ['large', 'medium', 'small'])
@@ -83,7 +83,7 @@ export function pexels(config: PexelsConfig) {
       const url = new URL('https://api.pexels.com/v1/search')
       url.searchParams.set('query', q.text)
       url.searchParams.set('per_page', String(Math.min(q.limit ?? 15, 80)))
-      applyPexelsSearchParams(url, q)
+      applyPexelsSearchParams(url, q, { allowColor: true })
       const res = await ctx.fetch(url.toString(), { headers: { Authorization: config.apiKey }, signal: ctx.signal })
       if (!res.ok) throw new Error(`pexels search failed: ${res.status}`)
       const json = (await res.json()) as PexelsResponse
