@@ -6,9 +6,17 @@ import type { Intent, Verdict } from './evaluate-use'
 import { evaluateUse } from './evaluate-use'
 import type { Attribution } from './attribution'
 import { buildAttribution } from './attribution'
-import type { ReferenceProvider, ProviderContext, KeyValueCache, SearchFilters, ProviderOptionsById } from './provider'
+import type {
+  ReferenceProvider,
+  ProviderContext,
+  KeyValueCache,
+  SearchFilters,
+  SearchControls,
+  SearchControlKey,
+  ProviderOptionsById,
+} from './provider'
 import { mergeReferences, type MergeOptions } from './merge'
-import { normalizeQuery } from './query'
+import { mergeSearchControls, normalizeQuery, requestedControlKeys, supportedControlKeys, unsupportedControlKeys } from './query'
 
 export interface RefkitOptions {
   providers: ReferenceProvider[]
@@ -40,6 +48,12 @@ export interface SearchGateMeta {
   dropped: number
 }
 
+export interface SearchControlsMeta {
+  requested: SearchControlKey[]
+  appliedByProvider: Record<string, SearchControlKey[]>
+  ignoredByProvider: Record<string, SearchControlKey[]>
+}
+
 export interface SearchMeta {
   query: string
   modalities: Modality[]
@@ -47,6 +61,7 @@ export interface SearchMeta {
   poolFactor: number
   fetchLimit: number
   appliedFilters?: SearchFilters
+  controls?: SearchControlsMeta
   providerOptions?: string[]
   providers: ProviderSearchStatus[]
   gate?: SearchGateMeta
@@ -62,6 +77,7 @@ export interface SearchInput {
   query: string
   modalities: Modality[]
   filters?: SearchFilters
+  controls?: SearchControls
   /** Provider-specific search controls keyed by provider id. Core routes only the
    * matching entry to each provider; providers whitelist what they translate. */
   providerOptions?: ProviderOptionsById
@@ -121,6 +137,13 @@ export function createRefkit(options: RefkitOptions): RefkitClient {
     // Overfetch a wider candidate pool per provider, then narrow to `limit` after
     // merge/rerank/gate — you can't rank or dedup candidates you never fetched.
     const fetchLimit = Math.max(limit, Math.min(Math.ceil(limit * poolFactor), MAX_POOL_LIMIT))
+    const requestedControlsSource = mergeSearchControls(input.controls, input.filters)
+    const requestedControls = requestedControlKeys(requestedControlsSource)
+    const controlsMeta = requestedControls.length > 0 ? {
+      requested: requestedControls,
+      appliedByProvider: Object.fromEntries(options.providers.map(p => [p.id, supportedControlKeys(p, requestedControlsSource)])),
+      ignoredByProvider: Object.fromEntries(options.providers.map(p => [p.id, unsupportedControlKeys(p, requestedControlsSource)])),
+    } : undefined
     const statusByProvider = new Map<string, ProviderSearchStatus>()
     for (const p of options.providers) {
       if (!chosen.includes(p)) statusByProvider.set(p.id, { providerId: p.id, status: 'skipped', reason: 'unsupported-modality' })
@@ -132,6 +155,7 @@ export function createRefkit(options: RefkitOptions): RefkitClient {
             query: input.query,
             modalities: input.modalities,
             filters: input.filters,
+            controls: input.controls,
             providerOptions: input.providerOptions,
             limit: fetchLimit,
           }, p),
@@ -205,6 +229,7 @@ export function createRefkit(options: RefkitOptions): RefkitClient {
         poolFactor,
         fetchLimit,
         ...(input.filters ? { appliedFilters: input.filters } : {}),
+        ...(controlsMeta ? { controls: controlsMeta } : {}),
         ...(input.providerOptions ? { providerOptions: Object.keys(input.providerOptions) } : {}),
         providers: options.providers.map(p => statusByProvider.get(p.id) ?? { providerId: p.id, status: 'skipped', reason: 'unsupported-modality' }),
         ...(gate ? { gate } : {}),

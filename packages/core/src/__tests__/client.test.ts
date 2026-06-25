@@ -236,4 +236,32 @@ describe('createRefkit', () => {
     const out = await rk.search({ query: 'x', modalities: ['image'] })
     expect(out.map(r => r.id)).toEqual(['a-2'])
   })
+
+  it('searchWithMeta reports applied and ignored unified controls by provider', async () => {
+    const controlled = defineProvider({
+      id: 'controlled',
+      modalities: ['image'],
+      queryFeatures: ['keyword'],
+      capabilities: { controls: ['orientation', 'color'] },
+      search: async () => [ref('controlled-1', 'https://controlled/1')],
+    })
+    const plain = defineProvider({
+      id: 'plain',
+      modalities: ['image'],
+      queryFeatures: ['keyword'],
+      capabilities: { controls: [] },
+      search: async () => [ref('plain-1', 'https://plain/1')],
+    })
+    const rk = createRefkit({ providers: [controlled, plain] })
+    const out = await rk.searchWithMeta({
+      query: 'x',
+      modalities: ['image'],
+      controls: { orientation: 'landscape', color: 'blue', safety: 'strict' },
+    })
+    expect(out.meta.controls).toEqual({
+      requested: ['orientation', 'color', 'safety'],
+      appliedByProvider: { controlled: ['orientation', 'color'], plain: [] },
+      ignoredByProvider: { controlled: ['safety'], plain: ['orientation', 'color', 'safety'] },
+    })
+  })
 })

@@ -9,6 +9,68 @@ export type QueryFeature =
   | 'author'
   | 'language'
 
+export type SearchSort = 'relevance' | 'latest' | 'popular' | 'interesting'
+export type SearchSafety = 'strict' | 'moderate' | 'off'
+
+export interface SearchLicenseControls {
+  commercial?: boolean
+  modification?: boolean
+  allowUnknown?: boolean
+}
+
+export interface SearchMediaControls {
+  kind?: 'photo' | 'illustration' | 'vector' | 'film' | 'animation'
+  size?: 'small' | 'medium' | 'large'
+  minWidth?: number
+  minHeight?: number
+  duration?: 'short' | 'medium' | 'long'
+}
+
+export interface SearchCreatorControls {
+  id?: string
+  name?: string
+}
+
+export interface SearchTextControls {
+  copyright?: 'public-domain' | 'copyrighted' | 'any'
+}
+
+export interface SearchControls {
+  orientation?: 'landscape' | 'portrait' | 'square'
+  color?: string
+  language?: string
+  sort?: SearchSort
+  safety?: SearchSafety
+  license?: SearchLicenseControls
+  media?: SearchMediaControls
+  creator?: SearchCreatorControls
+  text?: SearchTextControls
+  page?: number
+}
+
+export type SearchControlKey =
+  | 'orientation'
+  | 'color'
+  | 'language'
+  | 'sort'
+  | 'safety'
+  | 'license.commercial'
+  | 'license.modification'
+  | 'license.allowUnknown'
+  | 'media.kind'
+  | 'media.size'
+  | 'media.minWidth'
+  | 'media.minHeight'
+  | 'media.duration'
+  | 'creator.id'
+  | 'creator.name'
+  | 'text.copyright'
+  | 'page'
+
+export interface ProviderCapabilities {
+  controls: readonly SearchControlKey[]
+}
+
 export interface SearchFilters {
   color?: string
   orientation?: 'landscape' | 'portrait' | 'square'
@@ -23,6 +85,7 @@ export interface NormalizedQuery {
   text: string
   modalities: Modality[]
   filters?: SearchFilters
+  controls?: SearchControls
   providerOptions?: ProviderOptions
   limit?: number
 }
@@ -47,6 +110,7 @@ export interface ReferenceProvider {
   id: string
   modalities: Modality[]
   queryFeatures: QueryFeature[]
+  capabilities?: ProviderCapabilities
   search(query: NormalizedQuery, ctx: ProviderContext): Promise<Reference[]>
 }
 

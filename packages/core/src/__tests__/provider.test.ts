@@ -34,4 +34,15 @@ describe('ReferenceProvider / defineProvider', () => {
     const p = defineProvider({ id: 'x', modalities: ['text'], queryFeatures: [], search: async () => [] })
     expect(p.id).toBe('x')
   })
+
+  it('allows providers to declare supported unified search controls', () => {
+    const p = defineProvider({
+      id: 'x',
+      modalities: ['image'],
+      queryFeatures: ['keyword'],
+      capabilities: { controls: ['orientation', 'color', 'safety'] },
+      search: async () => [],
+    })
+    expect(p.capabilities?.controls).toEqual(['orientation', 'color', 'safety'])
+  })
 })
