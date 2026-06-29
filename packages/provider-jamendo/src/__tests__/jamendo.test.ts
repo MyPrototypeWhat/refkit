@@ -94,4 +94,31 @@ describe('jamendo provider', () => {
     expect(refs[0].rights.license).toBe('unknown')
     expect(evaluateUse(refs[0].rights, 'commercial-product').decision).toBe('needs-review')
   })
+
+  it('forwards client_id, search, limit, format and documented options', async () => {
+    const { ctx, url } = ctxCapturing(envelope([]))
+    await jamendo({ clientId: 'my-client-id' }).search({
+      text: 'ambient',
+      modalities: ['audio'],
+      limit: 7,
+      providerOptions: { audioformat: 'mp32', order: 'popularity_total', ccnc: false, tags: ['ambient', 'chill'], artist_name: 'fankel', offset: 20 },
+    }, ctx)
+    const u = new URL(url())
+    expect(u.searchParams.get('client_id')).toBe('my-client-id')
+    expect(u.searchParams.get('format')).toBe('json')
+    expect(u.searchParams.get('search')).toBe('ambient')
+    expect(u.searchParams.get('limit')).toBe('7')
+    expect(u.searchParams.get('audioformat')).toBe('mp32')
+    expect(u.searchParams.get('order')).toBe('popularity_total')
+    expect(u.searchParams.get('ccnc')).toBe('false')
+    expect(u.searchParams.get('tags')).toBe('ambient chill')
+    expect(u.searchParams.get('artist_name')).toBe('fankel')
+    expect(u.searchParams.get('offset')).toBe('20')
+  })
+
+  it('returns [] when Jamendo finds nothing', async () => {
+    const { ctx } = ctxCapturing(envelope([]))
+    const refs = await jamendo({ clientId: 'cid' }).search({ text: 'zzzz', modalities: ['audio'] }, ctx)
+    expect(refs).toEqual([])
+  })
 })
