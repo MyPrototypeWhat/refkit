@@ -1,6 +1,7 @@
 import {
   defineProvider, referenceId,
-  type Reference, type RightsRecord, type LicenseId,
+  setIfString, setIfBoolean, mapCcDeedUrl, isLikelyImageUrl,
+  type Reference, type RightsRecord,
   type NormalizedQuery, type ProviderContext,
 } from '@refkit/core'
 
@@ -28,22 +29,9 @@ export interface RijksmuseumSearchOptions {
 const SEARCH = 'https://data.rijksmuseum.nl/search/collection'
 const RIJKS_TERMS = 'https://www.rijksmuseum.nl/en/data/policy'
 
-// D7-style: map a CC deed URL to our LicenseId (+ CC version). Rijksmuseum open-access is
-// effectively CC0/PDM; BY/BY-SA are implemented for correctness but not expected. CC-only —
-// Rijksmuseum does not use rightsstatements.org, so this is replaced by core `mapCcDeedUrl`
-// (NOT core `mapRightsUrl`) in helper-refactor Task 4. Named `mapRijksRights` to avoid clashing
-// with the core `mapRightsUrl` helper, which additionally handles rightsstatements.org.
-function mapRijksRights(url: string | undefined): { license: LicenseId; version?: string } {
-  if (!url) return { license: 'unknown' }
-  if (/creativecommons\.org\/publicdomain\/zero/.test(url)) return { license: 'CC0-1.0' }
-  if (/creativecommons\.org\/publicdomain\/mark/.test(url)) return { license: 'PD' }
-  if (/rightsstatements\.org\/(?:vocab|page)\/NoCopyright/i.test(url)) return { license: 'PD' }
-  const sa = url.match(/creativecommons\.org\/licenses\/by-sa\/(\d\.\d)/)
-  if (sa) return { license: 'CC-BY-SA', version: sa[1] }
-  const by = url.match(/creativecommons\.org\/licenses\/by\/(\d\.\d)/)
-  if (by) return { license: 'CC-BY', version: by[1] }
-  return { license: 'unknown' }
-}
+// Rijksmuseum open-access rights are CC deed URLs (effectively CC0/PDM; BY/BY-SA possible).
+// Rijksmuseum does not use rightsstatements.org, so we use the CC-only core `mapCcDeedUrl`
+// (NOT core `mapRightsUrl`, which additionally handles rightsstatements.org).
 
 // The Linked-Art graph is deeply nested and varies per record, so we extract by
 // shape, not by fixed index paths (see plan Open Questions).
@@ -69,17 +57,8 @@ function findRightsUrl(node: unknown, depth = 0): string | undefined {
 // We must not put a NON-image URL (a viewer/collection web page) into preview.url.
 // The API carries the answer: a DigitalObject's `format` (a MIME type) and IIIF
 // `conforms_to` say which access_point is the image. So: read the type first, then
-// fall back to a cheap URL heuristic, then give up (no network probe — `core` never
-// fetches bytes, and that would add an extra request per item). See Open Questions #1.
-const IMAGE_EXT = /\.(jpe?g|png|webp|gif|tiff?)(?:$|\?)/i
-
-/** URL-string heuristic only (no network): does this look like an image resource? */
-function isLikelyImageUrl(url: string): boolean {
-  return IMAGE_EXT.test(url)
-    || /iiif/i.test(url)                       // IIIF image endpoint
-    || /\/full\/[^/]+\/\d+\/default/i.test(url) // IIIF Image API request URL
-    || /googleusercontent\.com/.test(url)       // Rijksmuseum/Met image CDN
-}
+// fall back to a cheap URL heuristic (core `isLikelyImageUrl`, no network probe — `core`
+// never fetches bytes, and that would add an extra request per item). See Open Questions #1.
 
 interface LaDigitalObject {
   type?: string
@@ -155,7 +134,7 @@ function toReference(rec: Record<string, unknown>): Reference | null {
   if (!id) return null
   const img = findImage(rec)
   if (!img) return null // no usable IMAGE url (e.g. only a viewer/collection page) → drop
-  const { license, version } = mapRijksRights(findRightsUrl(rec))
+  const { license, version } = mapCcDeedUrl(findRightsUrl(rec))
   const rights: RightsRecord = {
     license,
     licenseVersion: license === 'CC-BY' || license === 'CC-BY-SA' ? version : undefined,
@@ -176,15 +155,6 @@ function toReference(rec: Record<string, unknown>): Reference | null {
     relevance: 0,
     raw: rec,
   }
-}
-
-function setIfString(url: URL, key: string, value: unknown) {
-  if (typeof value !== 'string' || !value) return
-  url.searchParams.set(key, value)
-}
-function setIfBoolean(url: URL, key: string, value: unknown) {
-  if (typeof value !== 'boolean') return
-  url.searchParams.set(key, String(value))
 }
 
 interface SearchPage { orderedItems?: Array<{ id?: string }> }
