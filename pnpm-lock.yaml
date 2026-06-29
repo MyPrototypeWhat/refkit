@@ -121,6 +121,12 @@ importers:
         specifier: workspace:*
         version: link:../core
 
+  packages/provider-freesound:
+    dependencies:
+      '@refkit/core':
+        specifier: workspace:*
+        version: link:../core
+
   packages/provider-gutendex:
     dependencies:
       '@refkit/core':
