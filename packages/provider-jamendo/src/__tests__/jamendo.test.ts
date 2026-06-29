@@ -61,4 +61,21 @@ describe('jamendo provider', () => {
     expect(r.thumbnail?.url).toContain('usercontent.jamendo.com')
     expect(evaluateUse(r.rights, 'commercial-product').decision).toBe('allowed-with-attribution')
   })
+
+  const TRACK_NC = {
+    ...TRACK_BY,
+    id: '2000001',
+    name: 'For Listening Only',
+    license_ccurl: 'http://creativecommons.org/licenses/by-nc-nd/3.0/',
+    shareurl: 'https://www.jamendo.com/track/2000001',
+  }
+
+  it('maps a CC-BY-NC-ND track to proprietary → denied for commercial use', async () => {
+    const { ctx } = ctxCapturing(envelope([TRACK_NC]))
+    const refs = await jamendo({ clientId: 'cid' }).search({ text: 'listen', modalities: ['audio'] }, ctx)
+    expect(refs).toHaveLength(1)
+    expect(refs[0].rights.license).toBe('proprietary')
+    expect(refs[0].rights.licenseVersion).toBeUndefined()
+    expect(evaluateUse(refs[0].rights, 'commercial-product').decision).toBe('denied')
+  })
 })
