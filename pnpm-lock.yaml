@@ -143,6 +143,12 @@ importers:
         specifier: workspace:*
         version: link:../provider-poetrydb
 
+  packages/provider-internet-archive:
+    dependencies:
+      '@refkit/core':
+        specifier: workspace:*
+        version: link:../core
+
   packages/provider-jamendo:
     dependencies:
       '@refkit/core':
