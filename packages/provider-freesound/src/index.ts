@@ -1,5 +1,6 @@
 import {
   defineProvider, referenceId,
+  setIfString, setIfPositiveInt, mapCcDeedUrl,
   type Reference, type RightsRecord, type LicenseId,
   type NormalizedQuery, type ProviderContext,
 } from '@refkit/core'
@@ -22,19 +23,8 @@ export function mapFreesoundLicense(value: string): { license: LicenseId; versio
   const v = (value ?? '').trim()
   if (!v) return { license: 'unknown' }
 
-  // D7 — deed URL form
-  if (/^https?:\/\//i.test(v)) {
-    if (/\/publicdomain\/zero\//i.test(v)) return { license: 'CC0-1.0' }
-    const m = v.match(/\/licenses\/(by(?:-sa)?|by-nc[a-z-]*|by-nd[a-z-]*)\/(\d\.\d)\//i)
-    if (m) {
-      const fam = m[1].toLowerCase()
-      const version = m[2]
-      if (fam === 'by') return { license: 'CC-BY', version }
-      if (fam === 'by-sa') return { license: 'CC-BY-SA', version }
-      return { license: 'proprietary' } // any NC/ND variant
-    }
-    return { license: 'unknown' }
-  }
+  // D7 — deed URL form: delegate to the core CC-deed mapper (identical CC handling).
+  if (/^https?:\/\//i.test(v)) return mapCcDeedUrl(v)
 
   // D4 — name string form (case-insensitive)
   return FREESOUND_NAME_LICENSE[v.toLowerCase()] ?? { license: 'unknown' }
@@ -97,16 +87,6 @@ function toAudioReference(r: FreesoundResult): Reference {
     relevance: 0, // mergeReferences assigns the final RRF relevance
     raw: r,
   }
-}
-
-function setIfString(url: URL, key: string, value: unknown) {
-  if (typeof value !== 'string' || !value) return
-  url.searchParams.set(key, value)
-}
-
-function setIfPositiveInt(url: URL, key: string, value: unknown) {
-  if (typeof value !== 'number' || !Number.isInteger(value) || value < 1) return
-  url.searchParams.set(key, String(value))
 }
 
 export function freesound(config: FreesoundConfig) {
