@@ -78,4 +78,20 @@ describe('jamendo provider', () => {
     expect(refs[0].rights.licenseVersion).toBeUndefined()
     expect(evaluateUse(refs[0].rights, 'commercial-product').decision).toBe('denied')
   })
+
+  const TRACK_NO_LICENSE = {
+    ...TRACK_BY,
+    id: '3000002',
+    name: 'Mystery Track',
+    license_ccurl: '',
+    shareurl: 'https://www.jamendo.com/track/3000002',
+  }
+
+  it('maps a track with no recognizable license to unknown → needs-review', async () => {
+    const { ctx } = ctxCapturing(envelope([TRACK_NO_LICENSE]))
+    const refs = await jamendo({ clientId: 'cid' }).search({ text: 'mystery', modalities: ['audio'] }, ctx)
+    expect(refs).toHaveLength(1)
+    expect(refs[0].rights.license).toBe('unknown')
+    expect(evaluateUse(refs[0].rights, 'commercial-product').decision).toBe('needs-review')
+  })
 })
