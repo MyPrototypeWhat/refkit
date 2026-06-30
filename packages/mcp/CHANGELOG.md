@@ -1,5 +1,42 @@
 # @refkit/mcp
 
+## 0.4.0
+
+### Minor Changes
+
+- 2b16960: Add @refkit/provider-rijksmuseum: Rijksmuseum as license-normalized image references (keyless; CC0 / Public Domain).
+
+  Register the P1 providers in the @refkit/mcp zero-config server — rijksmuseum, polyhaven, ambientCG and internet-archive (keyless); freesound, jamendo and europeana (when their API key/token is set).
+
+### Patch Changes
+
+- Updated dependencies [2b16960]
+- Updated dependencies [2b16960]
+- Updated dependencies [2b16960]
+- Updated dependencies [2b16960]
+- Updated dependencies [2b16960]
+- Updated dependencies [2b16960]
+- Updated dependencies [2b16960]
+  - @refkit/provider-europeana@0.2.0
+  - @refkit/provider-freesound@0.2.0
+  - @refkit/core@0.5.0
+  - @refkit/provider-met@0.2.1
+  - @refkit/provider-artic@0.2.1
+  - @refkit/provider-openverse@0.2.1
+  - @refkit/provider-unsplash@0.2.1
+  - @refkit/provider-pexels@0.2.1
+  - @refkit/provider-pixabay@0.2.1
+  - @refkit/provider-gutendex@0.2.1
+  - @refkit/provider-smithsonian@0.2.1
+  - @refkit/provider-brave@0.2.1
+  - @refkit/provider-flickr@0.2.1
+  - @refkit/provider-wikimedia-commons@0.2.1
+  - @refkit/provider-internet-archive@0.2.0
+  - @refkit/provider-jamendo@0.2.0
+  - @refkit/provider-polyhaven@0.2.0
+  - @refkit/provider-rijksmuseum@0.2.0
+  - @refkit/provider-poetrydb@0.2.1
+
 ## 0.3.0
 
 ### Minor Changes

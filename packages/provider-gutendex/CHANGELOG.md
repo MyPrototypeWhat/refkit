@@ -1,5 +1,13 @@
 # @refkit/provider-gutendex
 
+## 0.2.1
+
+### Patch Changes
+
+- 2b16960: Add shared provider helpers to @refkit/core (setIf\* URL setters, first, mapCcDeedUrl, mapRightsUrl, image-URL heuristics) and refactor all providers to use them instead of per-package copies.
+- Updated dependencies [2b16960]
+  - @refkit/core@0.5.0
+
 ## 0.2.0
 
 ### Minor Changes
